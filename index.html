@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="consulta_guias_addon.css">
 <title>Tracking Guías · Línea Comunicaciones</title>
 <link rel="icon" type="image/png" href="./favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -113,6 +114,12 @@
       </button>
       <button class="tab-btn" data-tab="VELOCES" onclick="switchTab('VELOCES')">
         ⚡ Veloces <span class="tab-badge" id="badge-VELOCES">—</span>
+      </button>
+      <button class="tab-btn" data-tab="consulta-individual" onclick="switchTab('consulta-individual')">
+        🔍 Consultar Guía <span class="tab-badge">1</span>
+      </button>
+      <button class="tab-btn" data-tab="consulta-masiva" onclick="switchTab('consulta-masiva')">
+        📂 Consulta Masiva <span class="tab-badge">XLS</span>
       </button>
     </div>
 
@@ -236,6 +243,91 @@
     </div>
     <div class="tab-content" id="tab-VELOCES">
       <div id="content-VELOCES"></div>
+    </div>
+
+    <div class="tab-content" id="tab-consulta-individual">
+    <div class="consulta-wrap">
+    
+        <!-- Buscador -->
+        <div class="consulta-search-card">
+        <div class="consulta-search-title">🔍 Consultar Guía Individual</div>
+        <div class="consulta-search-sub">Ingresa el número de guía o documento para ver su estado actual y toda la información disponible en el sistema.</div>
+        <div class="consulta-search-row">
+            <input
+            class="consulta-search-input"
+            type="text"
+            id="consulta-guia-input"
+            placeholder="Ej: 1234567890 · ABC987654"
+            onkeydown="_consultaKeydown(event)"
+            autocomplete="off"
+            spellcheck="false"
+            >
+            <button class="btn-consultar" onclick="consultarGuiaIndividual()">
+            🔍 Consultar
+            </button>
+        </div>
+        </div>
+    
+        <!-- Resultado -->
+        <div id="consulta-guia-result"></div>
+    
+    </div>
+    </div>
+    
+    <!-- ════════════ TAB: CONSULTA MASIVA ════════════ -->
+    
+    <div class="tab-content" id="tab-consulta-masiva">
+    <div class="masiva-wrap">
+    
+        <!-- Acciones superiores -->
+        <div class="masiva-actions-row">
+        <button class="btn-secondary" onclick="descargarPlantillaMasiva()">
+            ↓ Descargar Plantilla Excel
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);align-self:center;">
+            Descarga la plantilla, pega tus guías y súbela aquí.
+        </span>
+        </div>
+    
+        <!-- Drop Zone -->
+        <div
+        class="drop-zone"
+        id="masiva-drop-zone"
+        ondragover="_masivaDragOver(event)"
+        ondragleave="_masivaDragLeave()"
+        ondrop="onMasivaDrop(event)"
+        >
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="onMasivaFileChange(event)">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-title">Arrastra tu Excel aquí o haz clic para seleccionar</div>
+        <div class="drop-zone-sub">Formatos aceptados: .xlsx · .xls · .csv · Columna: NUMERO_GUIA</div>
+        <div class="drop-zone-file-name" id="masiva-file-name"></div>
+        </div>
+    
+        <!-- Botón consultar + counter -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+        <button class="btn-consultar" id="btn-consultar-masiva" onclick="ejecutarConsultaMasiva()" disabled>
+            🚀 Consultar Guías
+        </button>
+        <span id="masiva-guias-count" style="font-size:12px;color:var(--text-dim);font-family:'Space Mono',monospace;"></span>
+        </div>
+    
+        <!-- Progress bar -->
+        <div class="masiva-progress-card" id="masiva-progress-card">
+        <div class="masiva-progress-title">
+            <span class="inline-spinner"></span>
+            Consultando guías en el sistema...
+        </div>
+        <div class="masiva-progress-bar-track">
+            <div class="masiva-progress-bar-fill" id="masiva-prog-bar-fill"></div>
+        </div>
+        <div class="masiva-progress-stats" id="masiva-prog-stats">Iniciando...</div>
+        </div>
+    
+        <!-- Resultados dinámicos -->
+        <div id="masiva-results"></div>
+    
+    </div>
     </div>
 
   </main>
