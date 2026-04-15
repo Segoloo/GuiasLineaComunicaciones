@@ -402,6 +402,7 @@ body::before {
 .kpi-value.danger { color: var(--danger); }
 .kpi-value.info { color: var(--info); }
 .kpi-value.transit { color: var(--transit); }
+.kpi-value.muted { color: var(--text-dim); }
 .kpi-sub {
   font-size: 11px; color: var(--text-muted);
   margin-top: 6px;
@@ -1242,11 +1243,7 @@ function renderGeneral() {
   const data = RAW;
   // KPIs
   const total = data.length;
-  const entregadas = data.filter(r => /ENTREGAD/i.test(r.ESTADO)).length;
-  const transito = data.filter(r => /TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/i.test(r.ESTADO)).length;
-  const novedad = data.filter(r => /NOVEDAD/i.test(r.ESTADO) || (r.NOVEDAD && r.NOVEDAD !== 'NO APLICA' && r.NOVEDAD.trim() !== '')).length;
-  const pendientes = data.filter(r => /PEND|INGRES/i.test(r.ESTADO)).length;
-  const devueltas = data.filter(r => /DEVOLU|DEVUELT|REMITENTE/i.test(r.ESTADO)).length;
+  const { entregadas, transito, novedad, pendientes, devueltas, canceladas } = contarEstados(data);
 
   const kpis = [
     { label: 'Total Guías', value: total.toLocaleString(), cls: 'lima', icon: '📋' },
@@ -1255,6 +1252,7 @@ function renderGeneral() {
     { label: 'Con Novedad', value: novedad.toLocaleString(), cls: 'warn', icon: '⚠️', sub: pct(novedad, total) },
     { label: 'Pendientes', value: pendientes.toLocaleString(), cls: 'info', icon: '⏳', sub: pct(pendientes, total) },
     { label: 'Devueltas', value: devueltas.toLocaleString(), cls: 'danger', icon: '↩️', sub: pct(devueltas, total) },
+    { label: 'Canceladas', value: canceladas.toLocaleString(), cls: 'muted', icon: '🚫', sub: pct(canceladas, total) },
   ];
   document.getElementById('kpis-general').innerHTML = kpis.map(k => `
     <div class="kpi-card">
@@ -1342,11 +1340,7 @@ function renderCarrier(carrier) {
   if (!container) return;
 
   const total = data.length;
-  const entregadas = data.filter(r => /ENTREGAD/i.test(r.ESTADO)).length;
-  const transito = data.filter(r => /TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/i.test(r.ESTADO)).length;
-  const novedad = data.filter(r => /NOVEDAD/i.test(r.ESTADO) || (r.NOVEDAD && r.NOVEDAD !== 'NO APLICA' && r.NOVEDAD.trim())).length;
-  const pendientes = data.filter(r => /PEND|INGRES/i.test(r.ESTADO)).length;
-  const devueltas = data.filter(r => /DEVOLU|DEVUELT|REMITENTE/i.test(r.ESTADO)).length;
+  const { entregadas, transito, novedad, pendientes, devueltas, canceladas } = contarEstados(data);
   const pctEntr = total ? Math.round(entregadas / total * 100) : 0;
 
   container.innerHTML = `
@@ -1368,6 +1362,7 @@ function renderCarrier(carrier) {
       <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-label">Novedad</div><div class="kpi-value warn">${novedad.toLocaleString()}</div><div class="kpi-sub">${pct(novedad,total)}</div></div>
       <div class="kpi-card"><div class="kpi-icon">⏳</div><div class="kpi-label">Pendientes</div><div class="kpi-value info">${pendientes.toLocaleString()}</div><div class="kpi-sub">${pct(pendientes,total)}</div></div>
       <div class="kpi-card"><div class="kpi-icon">↩️</div><div class="kpi-label">Devueltas</div><div class="kpi-value danger">${devueltas.toLocaleString()}</div><div class="kpi-sub">${pct(devueltas,total)}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">🚫</div><div class="kpi-label">Canceladas</div><div class="kpi-value muted">${canceladas.toLocaleString()}</div><div class="kpi-sub">${pct(canceladas,total)}</div></div>
     </div>
 
     <div class="chart-grid">
@@ -1603,8 +1598,69 @@ function renderChartCiudades(canvasId, data) {
 }
 
 // ══════════════════════════════════════════════════
-//  HELPERS
+//  NORMALIZACIÓN DE ESTADOS
+//  Cubre capitalización mixta de Coordinadora y
+//  todas las demás transportadoras
 // ══════════════════════════════════════════════════
+function normalizeEstado(raw) {
+  const e = (raw || '').toUpperCase().trim();
+
+  // ── ENTREGADO ──────────────────────────────────
+  // ENTREGADA, ENTREGADO, Entregado, ENTREGADO A REMITENTE
+  if (/^ENTREGAD/.test(e)) {
+    if (/REMITENTE/.test(e)) return 'devuelta';
+    return 'entregada';
+  }
+
+  // ── NOVEDAD ────────────────────────────────────
+  // Novedad, NOVEDAD, Novedad (En bodega), CERRADO POR INCIDENCIA
+  // SINIESTRADO, Siniestro, EN ALISTAMIENTO DEL CLIENTE
+  if (/NOVEDAD|INCIDENCIA|SINIESTRO|SINIESTRAD|EN ALISTAMIENTO/.test(e)) return 'novedad';
+
+  // ── DEVUELTA ───────────────────────────────────
+  // Devolución Proveedor, Devolución en Bodega, Devolución en ruta
+  // En Proceso de Devolución, DEVOLUCION, DEVUELT, A REMITENTE
+  if (/DEVOLU|DEVUELT|PROCESO DE DEVOL|EN PROCESO DE DEV/.test(e)) return 'devuelta';
+
+  // ── EN TRÁNSITO ────────────────────────────────
+  // DESPACHADO, EN TRANSPORTE, EN TERMINAL DESTINO, EN TERMINAL ORIGEN
+  // EN REPARTO, En Camino, En Ruta, En Transito, DESPACHA, En Proceso,
+  // Bodega Destino, Bodega Origen, EN PUNTO DROOP, EN PROCESAMIENTO
+  if (
+    /^DESPACH|EN TRANSPORTE|EN TERMINAL|EN REPARTO|EN CAMINO|EN RUTA$|EN TRANSITO|EN TR[AÁ]N|EN PUNTO|EN PROCESAMIENTO|BODEGA (DESTINO|ORIGEN)|^En Camino$/i.test(raw || '') ||
+    /^DESPACH|EN TRANSPORTE|EN TERMINAL|EN REPARTO|EN CAMINO|^EN RUTA$|EN TRANSITO|EN TR[AÁ]N|EN PUNTO|EN PROCESAMIENTO|BODEGA/.test(e)
+  ) return 'transito';
+
+  // ── CANCELADO / CERRADO ────────────────────────
+  // Cancelado, NO APLICA (sin otra categoría)
+  if (/^CANCELADO$|^NO APLICA$/.test(e)) return 'cancelada';
+
+  // ── PENDIENTE / INGRESADO ──────────────────────
+  // INGRESADO, Guía Generada, RECIBIDO DEL CLIENTE
+  if (/^INGRESADO$|^GU[IÍ]A GENERADA$|^RECIBIDO DEL CLIENTE$|^PEND/.test(e)) return 'pendiente';
+
+  return 'otro';
+}
+
+// Contadores reutilizables
+function contarEstados(data) {
+  let entregadas = 0, transito = 0, novedad = 0, pendientes = 0, devueltas = 0, canceladas = 0;
+  data.forEach(r => {
+    const n = normalizeEstado(r.ESTADO);
+    // novedad también por campo NOVEDAD
+    const tieneNovedad = n === 'novedad' ||
+      (r.NOVEDAD && r.NOVEDAD.trim() !== '' && r.NOVEDAD.trim() !== 'NO APLICA');
+    if (n === 'entregada')   entregadas++;
+    else if (n === 'transito')    transito++;
+    else if (tieneNovedad)        novedad++;
+    else if (n === 'devuelta')    devueltas++;
+    else if (n === 'cancelada')   canceladas++;
+    else if (n === 'pendiente')   pendientes++;
+  });
+  return { entregadas, transito, novedad, pendientes, devueltas, canceladas };
+}
+
+
 function pct(n, total) {
   if (!total) return '0%';
   return Math.round(n / total * 100) + '%';
@@ -1615,14 +1671,15 @@ function esc(s) {
 }
 
 function statusPill(estado) {
-  const e = (estado||'').toUpperCase();
-  let cls = 'muted', label = estado||'—';
-  if (/ENTREGAD/.test(e)) cls = 'ok';
-  else if (/NOVEDAD/.test(e)) cls = 'warn';
-  else if (/DEVOLU|DEVUELT|REMITENTE/.test(e)) cls = 'danger';
-  else if (/TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/.test(e)) cls = 'transit';
-  else if (/PEND|INGRES/.test(e)) cls = 'info';
-  return `<span class="pill pill-${cls}">${esc(label.substring(0,30))}</span>`;
+  const n = normalizeEstado(estado);
+  let cls = 'muted';
+  if      (n === 'entregada')  cls = 'ok';
+  else if (n === 'novedad')    cls = 'warn';
+  else if (n === 'devuelta')   cls = 'danger';
+  else if (n === 'transito')   cls = 'transit';
+  else if (n === 'pendiente')  cls = 'info';
+  else if (n === 'cancelada')  cls = 'muted';
+  return `<span class="pill pill-${cls}">${esc((estado||'—').substring(0,35))}</span>`;
 }
 
 function mkPagination(containerId, current, pages, onPage) {
