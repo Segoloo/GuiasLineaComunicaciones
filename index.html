@@ -124,7 +124,7 @@
       <!-- Gráficas -->
       <div class="chart-grid">
         <div class="chart-card">
-          <div class="chart-title">Distribución por Estado</div>
+          <div class="chart-title">Distribución por Estado (Real)</div>
           <div class="chart-wrap" style="height:260px;">
             <canvas id="chart-estados-general"></canvas>
           </div>
@@ -141,6 +141,42 @@
             <canvas id="chart-timeline"></canvas>
           </div>
         </div>
+        <div class="chart-card wide">
+          <div class="chart-title">Tasa de Entrega / Tránsito / Novedad por Transportadora (%)</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="chart-tasa-entrega"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top 10 Ciudades Destino</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-ciudades-global"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top Tipos de Novedad</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-novedades-tipo"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Devoluciones y Novedades por Transportadora</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-dev-nov-carrier"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Guías Pendientes vs En Tránsito</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-pend-transito"></canvas>
+          </div>
+        </div>
+        <div class="chart-card wide">
+          <div class="chart-title">Tiempo Promedio de Entrega por Transportadora (días)</div>
+          <div class="chart-wrap" style="height:200px;">
+            <canvas id="chart-tiempo-entrega"></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- Tabla general -->
@@ -154,8 +190,25 @@
           <option value="SERVIENTREGA">Servientrega</option>
           <option value="VELOCES">Veloces</option>
         </select>
+        <select class="filter-select" id="filter-estado-norm" onchange="filterGeneral()">
+          <option value="">Categoría estado</option>
+          <option value="entregada">✅ Entregadas</option>
+          <option value="transito">🚚 En Tránsito</option>
+          <option value="novedad">⚠️ Novedad</option>
+          <option value="pendiente">⏳ Pendientes</option>
+          <option value="devuelta">↩️ Devueltas</option>
+          <option value="cancelada">🚫 Canceladas</option>
+          <option value="otro">❓ Otro</option>
+        </select>
         <select class="filter-select" id="filter-estado" onchange="filterGeneral()">
-          <option value="">Todos los estados</option>
+          <option value="">Estado exacto</option>
+        </select>
+        <input class="filter-input" type="text" id="filter-ciudad" placeholder="Ciudad destino..." oninput="filterGeneral()" style="max-width:160px;">
+        <input class="filter-input" type="date" id="filter-fecha-desde" onchange="filterGeneral()" title="Desde (fecha procesamiento)" style="max-width:145px;">
+        <input class="filter-input" type="date" id="filter-fecha-hasta" onchange="filterGeneral()" title="Hasta (fecha procesamiento)" style="max-width:145px;">
+        <input class="filter-input" type="text" id="filter-guia" placeholder="Número de guía..." oninput="filterGeneral()" style="max-width:155px;">
+        <select class="filter-select" id="filter-ciudad-origen" onchange="filterGeneral()" style="max-width:160px;">
+          <option value="">Ciudad origen...</option>
         </select>
         <button class="btn-secondary" onclick="clearFilters()">✕ Limpiar</button>
       </div>

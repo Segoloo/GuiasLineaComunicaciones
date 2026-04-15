@@ -259,6 +259,17 @@ function initDashboard() {
     selEstado.appendChild(opt);
   });
 
+  // Poblar ciudades origen
+  const ciudadesOrigen = [...new Set(RAW.map(r => r.CIUDAD_ORIGEN).filter(Boolean))].sort();
+  const selCiudadOrigen = document.getElementById('filter-ciudad-origen');
+  if (selCiudadOrigen) {
+    ciudadesOrigen.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      selCiudadOrigen.appendChild(opt);
+    });
+  }
+
   renderGeneral();
   transportadoras.forEach(t => renderCarrier(t));
 }
@@ -397,6 +408,12 @@ function renderGeneral() {
   renderChartEstados('chart-estados-general', data);
   renderChartTransportadoras('chart-transportadoras', data);
   renderChartTimeline('chart-timeline', data);
+  renderChartTasaEntrega('chart-tasa-entrega', data);
+  renderChartNovedadesTipo('chart-novedades-tipo', data);
+  renderChartCiudades('chart-ciudades-global', data);
+  renderChartDevNovCarrier('chart-dev-nov-carrier', data);
+  renderChartPendTransito('chart-pend-transito', data);
+  renderChartTiempoEntrega('chart-tiempo-entrega', data);
 
   FILTERED_GENERAL = [...data];
   pagGeneral = 1;
@@ -416,12 +433,6 @@ function kpiClick(estado, label, carrier) {
 }
 
 function filtrarPorEstadoNorm(data, estado) {
-  if (estado === 'novedad') {
-    return data.filter(r => {
-      const n = normalizeEstado(r.ESTADO);
-      return n === 'novedad' || (r.NOVEDAD && r.NOVEDAD.trim() !== '' && r.NOVEDAD.trim() !== 'NO APLICA');
-    });
-  }
   return data.filter(r => normalizeEstado(r.ESTADO) === estado);
 }
 
@@ -429,12 +440,24 @@ function filterGeneral() {
   const search = (document.getElementById('search-general').value || '').toLowerCase().trim();
   const trans = document.getElementById('filter-transportadora').value;
   const estado = document.getElementById('filter-estado').value;
+  const estadoNorm = document.getElementById('filter-estado-norm')?.value || '';
+  const ciudad = (document.getElementById('filter-ciudad')?.value || '').toLowerCase().trim();
+  const fechaDesde = document.getElementById('filter-fecha-desde')?.value || '';
+  const fechaHasta = document.getElementById('filter-fecha-hasta')?.value || '';
+  const guia = (document.getElementById('filter-guia')?.value || '').toLowerCase().trim();
+  const ciudadOrigen = document.getElementById('filter-ciudad-origen')?.value || '';
 
   FILTERED_GENERAL = RAW.filter(r => {
     if (trans && r.TRANSPORTADORA !== trans) return false;
     if (estado && r.ESTADO !== estado) return false;
+    if (estadoNorm && normalizeEstado(r.ESTADO) !== estadoNorm) return false;
+    if (ciudad && !(r.CIUDAD_DESTINO||'').toLowerCase().includes(ciudad)) return false;
+    if (ciudadOrigen && r.CIUDAD_ORIGEN !== ciudadOrigen) return false;
+    if (fechaDesde && (r.FECHA_PROCESAMIENTO||'') < fechaDesde) return false;
+    if (fechaHasta && (r.FECHA_PROCESAMIENTO||'') > fechaHasta + 'T23:59:59') return false;
+    if (guia && !(r.GUIA||'').toLowerCase().includes(guia)) return false;
     if (search) {
-      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.TRANSPORTADORA, r.ESTADO, r.DOCUMENTO]
+      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.TRANSPORTADORA, r.ESTADO, r.DOCUMENTO, r.NOVEDAD]
         .map(v => (v||'').toLowerCase()).join(' ');
       if (!hay.includes(search)) return false;
     }
@@ -448,6 +471,12 @@ function clearFilters() {
   document.getElementById('search-general').value = '';
   document.getElementById('filter-transportadora').value = '';
   document.getElementById('filter-estado').value = '';
+  const fn = document.getElementById('filter-estado-norm'); if (fn) fn.value = '';
+  const fc = document.getElementById('filter-ciudad'); if (fc) fc.value = '';
+  const fd = document.getElementById('filter-fecha-desde'); if (fd) fd.value = '';
+  const fh = document.getElementById('filter-fecha-hasta'); if (fh) fh.value = '';
+  const fg = document.getElementById('filter-guia'); if (fg) fg.value = '';
+  const fo = document.getElementById('filter-ciudad-origen'); if (fo) fo.value = '';
   filterGeneral();
 }
 
@@ -531,10 +560,24 @@ function renderCarrier(carrier) {
     <div class="filters-bar">
       <span class="filter-label">Filtrar</span>
       <input class="filter-input" type="text" id="search-${carrier}" placeholder="Buscar guía, destinatario..." oninput="filterCarrier('${carrier}')">
+      <select class="filter-select" id="filter-estadonorm-${carrier}" onchange="filterCarrier('${carrier}')">
+        <option value="">Categoría estado</option>
+        <option value="entregada">✅ Entregadas</option>
+        <option value="transito">🚚 En Tránsito</option>
+        <option value="novedad">⚠️ Novedad</option>
+        <option value="pendiente">⏳ Pendientes</option>
+        <option value="devuelta">↩️ Devueltas</option>
+        <option value="cancelada">🚫 Canceladas</option>
+        <option value="otro">❓ Otro</option>
+      </select>
       <select class="filter-select" id="filter-estado-${carrier}" onchange="filterCarrier('${carrier}')">
-        <option value="">Todos los estados</option>
+        <option value="">Estado exacto</option>
         ${[...new Set(data.map(r=>r.ESTADO).filter(Boolean))].sort().map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('')}
       </select>
+      <input class="filter-input" type="text" id="filter-ciudad-${carrier}" placeholder="Ciudad destino..." oninput="filterCarrier('${carrier}')" style="max-width:160px;">
+      <input class="filter-input" type="date" id="filter-fechadesde-${carrier}" onchange="filterCarrier('${carrier}')" title="Desde (fecha procesamiento)" style="max-width:140px;">
+      <input class="filter-input" type="date" id="filter-fechahasta-${carrier}" onchange="filterCarrier('${carrier}')" title="Hasta (fecha procesamiento)" style="max-width:140px;">
+      <button class="btn-secondary" onclick="clearCarrierFilters('${carrier}')">✕ Limpiar</button>
     </div>
     <div class="table-container">
       <div class="table-header">
@@ -560,11 +603,19 @@ const _carrierPage = {};
 function filterCarrier(carrier) {
   const search = (document.getElementById('search-' + carrier)?.value || '').toLowerCase().trim();
   const estado = document.getElementById('filter-estado-' + carrier)?.value || '';
+  const estadoNorm = document.getElementById('filter-estadonorm-' + carrier)?.value || '';
+  const ciudad = (document.getElementById('filter-ciudad-' + carrier)?.value || '').toLowerCase().trim();
+  const fechaDesde = document.getElementById('filter-fechadesde-' + carrier)?.value || '';
+  const fechaHasta = document.getElementById('filter-fechahasta-' + carrier)?.value || '';
   const base = RAW.filter(r => r.TRANSPORTADORA === carrier);
   _carrierFiltered[carrier] = base.filter(r => {
     if (estado && r.ESTADO !== estado) return false;
+    if (estadoNorm && normalizeEstado(r.ESTADO) !== estadoNorm) return false;
+    if (ciudad && !(r.CIUDAD_DESTINO||'').toLowerCase().includes(ciudad)) return false;
+    if (fechaDesde && (r.FECHA_PROCESAMIENTO||'') < fechaDesde) return false;
+    if (fechaHasta && (r.FECHA_PROCESAMIENTO||'') > fechaHasta + 'T23:59:59') return false;
     if (search) {
-      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.ESTADO, r.DOCUMENTO]
+      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.ESTADO, r.DOCUMENTO, r.NOVEDAD]
         .map(v=>(v||'').toLowerCase()).join(' ');
       if (!hay.includes(search)) return false;
     }
@@ -574,7 +625,15 @@ function filterCarrier(carrier) {
   renderTableCarrier(carrier, _carrierFiltered[carrier], RAW.filter(r=>r.TRANSPORTADORA===carrier));
 }
 
-function renderTableCarrier(carrier, data, base) {
+function clearCarrierFilters(carrier) {
+  const s = document.getElementById('search-' + carrier); if (s) s.value = '';
+  const e = document.getElementById('filter-estado-' + carrier); if (e) e.value = '';
+  const en = document.getElementById('filter-estadonorm-' + carrier); if (en) en.value = '';
+  const c = document.getElementById('filter-ciudad-' + carrier); if (c) c.value = '';
+  filterCarrier(carrier);
+}
+
+function renderTableCarrier(carrier, base, _unused) {
   if (!_carrierFiltered[carrier]) _carrierFiltered[carrier] = base;
   if (!_carrierPage[carrier]) _carrierPage[carrier] = 1;
   const fd = _carrierFiltered[carrier];
@@ -743,42 +802,164 @@ function renderChartCiudades(canvasId, data) {
   });
 }
 
+function renderChartTasaEntrega(canvasId, data) {
+  destroyChart(canvasId);
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const labels = [], entregPct = [], novedPct = [], transitPct = [];
+  carriers.forEach(c => {
+    const rows = data.filter(r => r.TRANSPORTADORA === c);
+    if (!rows.length) return;
+    const { entregadas, transito, novedad } = contarEstados(rows);
+    labels.push(c);
+    entregPct.push(+(entregadas / rows.length * 100).toFixed(1));
+    transitPct.push(+(transito / rows.length * 100).toFixed(1));
+    novedPct.push(+(novedad / rows.length * 100).toFixed(1));
+  });
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Entregadas %', data: entregPct, backgroundColor: 'rgba(74,222,128,.75)', borderRadius: 6 },
+        { label: 'En Tránsito %', data: transitPct, backgroundColor: 'rgba(167,139,250,.75)', borderRadius: 6 },
+        { label: 'Novedad %', data: novedPct, backgroundColor: 'rgba(250,204,21,.75)', borderRadius: 6 },
+      ]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10},callback:v=>v+'%'}, grid:{color:'rgba(255,255,255,.04)'}, max:100 }
+      }
+    }
+  });
+}
+
+function renderChartNovedadesTipo(canvasId, data) {
+  destroyChart(canvasId);
+  // Agrupar novedades por el campo NOVEDAD (solo registros con estado novedad)
+  const novedadRows = data.filter(r => normalizeEstado(r.ESTADO) === 'novedad');
+  const counts = {};
+  novedadRows.forEach(r => {
+    const v = (r.NOVEDAD || r.ESTADO || 'SIN DESCRIPCIÓN').trim();
+    const key = v.substring(0, 40);
+    counts[key] = (counts[key]||0)+1;
+  });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(([k])=>k),
+      datasets: [{
+        data: top.map(([,v])=>v),
+        backgroundColor: PALETTE.map(c=>c+'cc'),
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      indexAxis: 'y',
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#e8eaf0',font:{family:'DM Sans',size:10},maxTicksLimit:10}, grid:{color:'rgba(255,255,255,.04)'} }
+      },
+      plugins: { ...CHART_DEFAULTS.plugins, legend:{display:false} }
+    }
+  });
+}
+
+function renderChartEstadosCat(canvasId, data) {
+  // Gráfico de barras agrupadas por categoría normalizada
+  destroyChart(canvasId);
+  const cats = ['entregada','transito','novedad','pendiente','devuelta','cancelada','otro'];
+  const labels = ['Entregadas','En Tránsito','Novedad','Pendientes','Devueltas','Canceladas','Otro'];
+  const colors = ['#4ade80','#a78bfa','#facc15','#60a5fa','#f87171','#4a5068','#7a8099'];
+  const counts = cats.map(() => 0);
+  data.forEach(r => {
+    const idx = cats.indexOf(normalizeEstado(r.ESTADO));
+    if (idx >= 0) counts[idx]++;
+  });
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: colors.map(c=>c+'cc'),
+        borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10}}, grid:{color:'rgba(255,255,255,.04)'} }
+      },
+      plugins: { ...CHART_DEFAULTS.plugins, legend:{display:false} }
+    }
+  });
+}
+
 // ══════════════════════════════════════════════════
 //  NORMALIZACIÓN DE ESTADOS
 // ══════════════════════════════════════════════════
 function normalizeEstado(raw) {
-  const e = (raw || '').toUpperCase().trim();
+  // Guard: valores vacíos, booleanos falsos, o literales "false"/"null"/"undefined"
+  if (raw === null || raw === undefined || raw === false ||
+      raw === 'false' || raw === 'False' || raw === 'FALSE' ||
+      raw === 'null' || raw === 'undefined' || raw === '') return 'otro';
 
-  if (/^ENTREGAD/.test(e)) {
-    if (/REMITENTE/.test(e)) return 'devuelta';
-    return 'entregada';
-  }
-  if (/NOVEDAD|INCIDENCIA|SINIESTRO|SINIESTRAD|EN ALISTAMIENTO/.test(e)) return 'novedad';
+  const e = String(raw).toUpperCase().trim();
+  if (!e) return 'otro';
+
+  // ENTREGADAS A REMITENTE → devuelta (debe ir ANTES que la regla genérica de ENTREGAD)
+  if (/ENTREGADO A REMITENTE|ENTREGADA A REMITENTE/.test(e)) return 'devuelta';
+
+  // ENTREGADAS — primero, antes de cualquier otra regla
+  if (/^ENTREGAD/.test(e)) return 'entregada';
+  // Aliases explícitos por si acaso
+  if (e === 'ENTREGADO' || e === 'ENTREGADA') return 'entregada';
+
+  // DEVOLUCIONES
   if (/DEVOLU|DEVUELT|PROCESO DE DEVOL|EN PROCESO DE DEV/.test(e)) return 'devuelta';
+
+  // NOVEDADES — SOLO estados que son puramente novedad, nunca entregados
+  if (/^NOVEDAD$|^NOVEDAD \(|CERRADO POR INCIDENCIA|^SINIESTRO$|^SINIESTRAD/.test(e)) return 'novedad';
+
+  // TRÁNSITO
   if (
-    /^DESPACH|EN TRANSPORTE|EN TERMINAL|EN REPARTO|EN CAMINO|EN RUTA$|EN TRANSITO|EN TR[AÁ]N|EN PUNTO|EN PROCESAMIENTO|BODEGA (DESTINO|ORIGEN)|^En Camino$/i.test(raw || '') ||
-    /^DESPACH|EN TRANSPORTE|EN TERMINAL|EN REPARTO|EN CAMINO|^EN RUTA$|EN TRANSITO|EN TR[AÁ]N|EN PUNTO|EN PROCESAMIENTO|BODEGA/.test(e)
+    /^DESPACH|EN TRANSPORTE|EN TERMINAL|EN REPARTO|^EN CAMINO$|^EN RUTA$|^EN TRANSITO$|EN TR[AÁ]N|EN PUNTO|EN PROCESAMIENTO|^BODEGA/.test(e) ||
+    /^En Camino$/i.test(String(raw))
   ) return 'transito';
+
+  // CANCELADAS
   if (/^CANCELADO$|^NO APLICA$/.test(e)) return 'cancelada';
-  if (/^INGRESADO$|^GU[IÍ]A GENERADA$|^RECIBIDO DEL CLIENTE$|^PEND/.test(e)) return 'pendiente';
+
+  // PENDIENTES — incluye EN ALISTAMIENTO DEL CLIENTE y RECIBIDO DEL CLIENTE
+  if (/^INGRESADO$|^GU[IÍ]A GENERADA$|^RECIBIDO DEL CLIENTE$|^EN ALISTAMIENTO DEL CLIENTE$|^PEND/.test(e)) return 'pendiente';
 
   return 'otro';
 }
 
 function contarEstados(data) {
-  let entregadas = 0, transito = 0, novedad = 0, pendientes = 0, devueltas = 0, canceladas = 0;
+  let entregadas = 0, transito = 0, novedad = 0, pendientes = 0, devueltas = 0, canceladas = 0, otro = 0;
   data.forEach(r => {
     const n = normalizeEstado(r.ESTADO);
-    const tieneNovedad = n === 'novedad' ||
-      (r.NOVEDAD && r.NOVEDAD.trim() !== '' && r.NOVEDAD.trim() !== 'NO APLICA');
-    if (n === 'entregada')   entregadas++;
-    else if (n === 'transito')    transito++;
-    else if (tieneNovedad)        novedad++;
-    else if (n === 'devuelta')    devueltas++;
-    else if (n === 'cancelada')   canceladas++;
-    else if (n === 'pendiente')   pendientes++;
+    if      (n === 'entregada')  entregadas++;
+    else if (n === 'transito')   transito++;
+    else if (n === 'novedad')    novedad++;
+    else if (n === 'devuelta')   devueltas++;
+    else if (n === 'cancelada')  canceladas++;
+    else if (n === 'pendiente')  pendientes++;
+    else                         otro++;
   });
-  return { entregadas, transito, novedad, pendientes, devueltas, canceladas };
+  return { entregadas, transito, novedad, pendientes, devueltas, canceladas, otro };
 }
 
 function pct(n, total) {
@@ -818,6 +999,117 @@ function mkPagination(containerId, current, pages, onPage) {
     <button class="pag-btn" onclick="(${onPage.toString()})(${current+1})" ${current>=pages?'disabled':''}>→</button>
     <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${current} / ${pages}</span>
   `;
+}
+
+// ══════════════════════════════════════════════════
+//  NUEVAS GRÁFICAS
+// ══════════════════════════════════════════════════
+
+// Devoluciones y Novedades absolutas por transportadora
+function renderChartDevNovCarrier(canvasId, data) {
+  destroyChart(canvasId);
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const devData = [], novData = [], cancData = [], labels = [];
+  carriers.forEach(c => {
+    const rows = data.filter(r => r.TRANSPORTADORA === c);
+    if (!rows.length) return;
+    const { devueltas, novedad, canceladas } = contarEstados(rows);
+    labels.push(c);
+    devData.push(devueltas);
+    novData.push(novedad);
+    cancData.push(canceladas);
+  });
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Devueltas', data: devData, backgroundColor: 'rgba(248,113,113,.8)', borderRadius: 6 },
+        { label: 'Novedad',   data: novData, backgroundColor: 'rgba(250,204,21,.8)',  borderRadius: 6 },
+        { label: 'Canceladas',data: cancData,backgroundColor: 'rgba(74,80,104,.8)',   borderRadius: 6 },
+      ]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10}}, grid:{color:'rgba(255,255,255,.04)'} }
+      }
+    }
+  });
+}
+
+// Pendientes vs En Tránsito (donut por categoría)
+function renderChartPendTransito(canvasId, data) {
+  destroyChart(canvasId);
+  const { transito, pendientes, entregadas, novedad, devueltas, canceladas, otro } = contarEstados(data);
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Entregadas','En Tránsito','Pendientes','Novedad','Devueltas','Canceladas','Otro'],
+      datasets: [{
+        data: [entregadas, transito, pendientes, novedad, devueltas, canceladas, otro],
+        backgroundColor: [
+          'rgba(74,222,128,.85)',
+          'rgba(167,139,250,.85)',
+          'rgba(96,165,250,.85)',
+          'rgba(250,204,21,.85)',
+          'rgba(248,113,113,.85)',
+          'rgba(74,80,104,.85)',
+          'rgba(122,128,153,.85)',
+        ],
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: { ...CHART_DEFAULTS, cutout: '60%' }
+  });
+}
+
+// Tiempo promedio de entrega por transportadora
+function renderChartTiempoEntrega(canvasId, data) {
+  destroyChart(canvasId);
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const labels = [], avgDays = [];
+  carriers.forEach(c => {
+    const rows = data.filter(r => r.TRANSPORTADORA === c && r.FECHA_DESPACHO && r.FECHA_ENTREGA && normalizeEstado(r.ESTADO) === 'entregada');
+    if (rows.length < 3) return;
+    const diffs = rows.map(r => {
+      const d1 = new Date(r.FECHA_DESPACHO);
+      const d2 = new Date(r.FECHA_ENTREGA);
+      if (isNaN(d1) || isNaN(d2) || d2 < d1) return null;
+      return (d2 - d1) / 86400000;
+    }).filter(d => d !== null && d >= 0 && d <= 60);
+    if (!diffs.length) return;
+    const avg = diffs.reduce((a,b) => a+b, 0) / diffs.length;
+    labels.push(c);
+    avgDays.push(+avg.toFixed(1));
+  });
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Días promedio',
+        data: avgDays,
+        backgroundColor: labels.map(l => (CARRIER_COLORS[l]||'#C5D336') + 'cc'),
+        borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10},callback:v=>v+' d'}, grid:{color:'rgba(255,255,255,.04)'}, beginAtZero:true }
+      },
+      plugins: { ...CHART_DEFAULTS.plugins, legend:{display:false} }
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════
