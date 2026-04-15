@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking Guías · Línea Comunicaciones</title>
+<link rel="icon" type="image/png" href="./favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -643,6 +644,119 @@ tbody td {
   font-size: 13px; color: var(--text-dim);
 }
 
+/* ══════════════════════════════════════════════════
+   PANTALLA DE CARGA COMPLETA (pre-dashboard)
+   ══════════════════════════════════════════════════ */
+#data-loading-screen {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  flex-direction: column;
+  gap: 0;
+}
+#data-loading-screen.hidden { display: none; }
+
+.dl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 52px 48px 44px;
+  width: 100%; max-width: 460px;
+  box-shadow: var(--shadow), var(--shadow-lima);
+  animation: fadeUp .5s ease;
+  position: relative; overflow: hidden;
+  text-align: center;
+}
+.dl-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--navy), var(--lima), var(--navy));
+  background-size: 200% auto;
+  animation: shimmer 1.4s linear infinite;
+}
+.dl-logo-wrap { margin-bottom: 32px; }
+.dl-logo-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--lima);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 26px; font-weight: 700; color: var(--navy);
+  margin: 0 auto 14px;
+  animation: limaGlow 2s ease-in-out infinite;
+}
+.dl-title {
+  font-size: 20px; font-weight: 700; color: var(--white); margin-bottom: 6px;
+}
+.dl-sub {
+  font-size: 13px; color: var(--text-dim); margin-bottom: 32px; line-height: 1.5;
+}
+.dl-progress-track {
+  width: 100%; height: 6px;
+  background: var(--surface3);
+  border-radius: 3px; overflow: hidden; margin-bottom: 14px;
+}
+.dl-progress-bar {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--navy-light), var(--lima));
+  width: 0%;
+  transition: width .4s ease;
+  position: relative;
+}
+.dl-progress-bar::after {
+  content: '';
+  position: absolute; right: 0; top: 0; bottom: 0; width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35));
+  animation: shimmer .8s linear infinite;
+}
+.dl-status {
+  font-size: 12px; color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+  min-height: 18px;
+}
+.dl-spinner-row {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 24px;
+}
+.dl-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--lima); opacity: .3;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.dl-dot:nth-child(2) { animation-delay: .2s; }
+.dl-dot:nth-child(3) { animation-delay: .4s; }
+
+/* ── LOGO IMAGES ────────────────────────────────── */
+.login-logo-img {
+  display: block;
+  height: 68px;
+  width: auto;
+  max-width: 300px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.topbar-logo-img {
+  height: 30px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.footer-logo-img {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.45;
+  filter: brightness(0) invert(1);
+}
+.dl-logo-img {
+  display: block;
+  height: 60px;
+  width: auto;
+  max-width: 280px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .main-content { padding: 16px; }
@@ -654,7 +768,26 @@ tbody td {
 </head>
 <body>
 
-<!-- ══════════ LOADING OVERLAY ══════════ -->
+<!-- ══════════ DATA LOADING SCREEN ══════════ -->
+<div id="data-loading-screen" class="hidden">
+  <div class="dl-card">
+    <div class="dl-logo-wrap">
+      <img src="./logo.png" alt="Línea Comunicaciones" class="dl-logo-img">
+    </div>
+    <div class="dl-title">Cargando Dashboard</div>
+    <div class="dl-sub" id="dl-sub-text">Descomprimiendo y procesando datos de guías...</div>
+    <div class="dl-progress-track">
+      <div class="dl-progress-bar" id="dl-progress-bar"></div>
+    </div>
+    <div class="dl-status" id="dl-status-text">Iniciando...</div>
+    <div class="dl-spinner-row">
+      <div class="dl-dot"></div>
+      <div class="dl-dot"></div>
+      <div class="dl-dot"></div>
+    </div>
+  </div>
+</div>
+
 <div class="loading-overlay" id="loading-overlay">
   <div class="loading-spinner"></div>
   <div class="loading-text" id="loading-text">Cargando datos...</div>
@@ -664,13 +797,7 @@ tbody td {
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo-wrap">
-      <div class="login-logo-fallback">
-        <div class="login-logo-circle">L</div>
-        <div class="login-brand-text">
-          <div class="login-brand-name">línea</div>
-          <div class="login-brand-sub">soluciones que te dan confianza</div>
-        </div>
-      </div>
+      <img src="./logo.png" alt="Línea Comunicaciones" class="login-logo-img">
     </div>
     <div class="login-title">Dashboard de Tracking</div>
     <div class="login-desc">
@@ -695,10 +822,7 @@ tbody td {
   <!-- TOPBAR -->
   <nav class="topbar">
     <div class="topbar-left">
-      <div class="topbar-logo-fallback">
-        <div class="topbar-logo-dot">L</div>
-        <div class="topbar-name">línea · Tracking</div>
-      </div>
+      <img src="./logo.png" alt="Línea Comunicaciones" class="topbar-logo-img">
       <div class="topbar-divider"></div>
       <span id="last-update">—</span>
     </div>
@@ -819,7 +943,7 @@ tbody td {
   </main>
 
   <footer class="footer">
-    <span>Línea Comunicaciones S.A.S · Dashboard de Tracking de Guías</span>
+    <img src="./logo.png" alt="Línea Comunicaciones" class="footer-logo-img">
     <span id="footer-year" style="font-family:'Space Mono',monospace;font-size:10px;"></span>
   </footer>
 </div>
@@ -831,7 +955,7 @@ tbody td {
 'use strict';
 
 // ── CONFIG ─────────────────────────────────────────
-const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/Segoloo/GuiasLineaComunicaciones/main/data.json.gz';
+const DATA_URL = './data.json.gz';
 const PAGE_SIZE = 60;
 
 // ── ESTADO ─────────────────────────────────────────
@@ -953,7 +1077,6 @@ function _enterApp(profile) {
   if (wr) wr.textContent = profile.role||'Lineacom';
 
   document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
   document.getElementById('footer-year').textContent = `v3.0 · ${new Date().getFullYear()}`;
 
   _sessionTimer = setTimeout(() => {
@@ -961,7 +1084,25 @@ function _enterApp(profile) {
     doLogout();
   }, 3600000);
 
+  // Mostrar pantalla de carga de datos (no el app todavía)
+  _showDataLoadingScreen();
   loadData();
+}
+
+function _showDataLoadingScreen() {
+  document.getElementById('data-loading-screen').classList.remove('hidden');
+}
+
+function _hideDataLoadingScreen() {
+  document.getElementById('data-loading-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+}
+
+function _setLoadProgress(pct, statusText) {
+  const bar = document.getElementById('dl-progress-bar');
+  const status = document.getElementById('dl-status-text');
+  if (bar) bar.style.width = pct + '%';
+  if (status) status.textContent = statusText || '';
 }
 
 function doLogout() {
@@ -971,7 +1112,11 @@ function doLogout() {
     if (accs.length) _msalInstance.logoutPopup({ account: accs[0] }).catch(() => {});
   }
   document.getElementById('app').classList.remove('visible');
+  document.getElementById('data-loading-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
+  // Reset estado pantalla carga
+  _setLoadProgress(0, 'Iniciando...');
+  document.getElementById('dl-sub-text').textContent = 'Descomprimiendo y procesando datos de guías...';
   RAW = []; FILTERED_GENERAL = [];
 }
 
@@ -986,14 +1131,18 @@ function hideLoading() {
 }
 
 async function loadData() {
-  showLoading();
-  document.getElementById('data-summary').textContent = 'Descargando datos desde GitHub...';
+  _setLoadProgress(5, 'Leyendo archivo local data.json.gz...');
+  document.getElementById('data-summary') && (document.getElementById('data-summary').textContent = 'Procesando datos...');
   try {
-    const res = await fetch(GITHUB_RAW_URL + '?t=' + Date.now());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _setLoadProgress(15, 'Descargando data.json.gz...');
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status} — archivo no encontrado`);
+
+    _setLoadProgress(35, 'Archivo recibido, descomprimiendo...');
     const ab = await res.arrayBuffer();
 
     // Descomprimir gzip usando DecompressionStream
+    _setLoadProgress(50, 'Descomprimiendo gzip...');
     const ds = new DecompressionStream('gzip');
     const writer = ds.writable.getWriter();
     writer.write(new Uint8Array(ab));
@@ -1011,9 +1160,11 @@ async function loadData() {
     let offset = 0;
     for (const c of chunks) { merged.set(c, offset); offset += c.length; }
 
+    _setLoadProgress(72, 'Parseando JSON...');
     const jsonStr = new TextDecoder('utf-8').decode(merged);
     const payload = JSON.parse(jsonStr);
 
+    _setLoadProgress(88, 'Construyendo dashboard...');
     RAW = payload.guias || [];
     const ts = payload.generado_en || '—';
     document.getElementById('last-update').textContent = `Actualizado: ${ts}`;
@@ -1021,14 +1172,31 @@ async function loadData() {
       `${RAW.length.toLocaleString()} registros históricos · ${ts}`;
 
     initDashboard();
+
+    _setLoadProgress(100, `✓ ${RAW.length.toLocaleString()} guías cargadas`);
+    document.getElementById('dl-sub-text').textContent = '¡Listo! Abriendo el dashboard...';
+
+    // Pequeña pausa para mostrar el 100%
+    await new Promise(r => setTimeout(r, 600));
+    _hideDataLoadingScreen();
+
   } catch (err) {
     console.error('[loadData]', err);
-    document.getElementById('data-summary').textContent = '⚠ Error al cargar datos: ' + err.message;
+    _setLoadProgress(0, '');
+    document.getElementById('dl-sub-text').textContent = '⚠ Error al cargar datos';
+    document.getElementById('dl-status-text').textContent = err.message;
+    document.getElementById('data-summary') && (document.getElementById('data-summary').textContent = '⚠ Error al cargar datos: ' + err.message);
+    // Mostrar app igual para que no quede bloqueado
+    await new Promise(r => setTimeout(r, 2500));
+    _hideDataLoadingScreen();
   }
-  hideLoading();
 }
 
-async function reloadData() { await loadData(); }
+async function reloadData() {
+  _showDataLoadingScreen();
+  document.getElementById('dl-sub-text').textContent = 'Actualizando datos...';
+  await loadData();
+}
 
 // ══════════════════════════════════════════════════
 //  DASHBOARD INIT
