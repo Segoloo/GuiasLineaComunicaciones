@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking Guías · Línea Comunicaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════
+   LINEACOM BRAND SYSTEM — Dark Mode BI Dashboard
+   Colores corporativos: #001D62 navy · #C5D336 lima
+   ══════════════════════════════════════════════════ */
+:root {
+  --navy:        #001D62;
+  --navy-light:  #0a2878;
+  --navy-dim:    #051440;
+  --lima:        #C5D336;
+  --lima-dim:    #a0ab28;
+  --lima-glow:   rgba(197,211,54,.18);
+  --navy-glow:   rgba(0,29,98,.4);
+
+  --bg:          #08090f;
+  --bg2:         #0d0f1a;
+  --surface:     #111527;
+  --surface2:    #161c35;
+  --surface3:    #1c2440;
+  --border:      rgba(197,211,54,.12);
+  --border2:     rgba(255,255,255,.06);
+  --text:        #e8eaf0;
+  --text-dim:    #7a8099;
+  --text-muted:  #4a5068;
+  --white:       #ffffff;
+
+  --ok:          #4ade80;
+  --warn:        #facc15;
+  --danger:      #f87171;
+  --info:        #60a5fa;
+  --transit:     #a78bfa;
+
+  --radius:      16px;
+  --radius-sm:   10px;
+  --shadow:      0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  --shadow-lima: 0 0 40px rgba(197,211,54,.12);
+  --transition:  all .22s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ATMOSPHERIC ─────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 0% 0%, rgba(0,29,98,.55) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(197,211,54,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(0,29,98,.25) 0%, transparent 65%);
+}
+
+/* ── SCROLLBAR ──────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--lima-dim); }
+
+/* ── ANIMATIONS ─────────────────────────────────── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes limaGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(197,211,54,.15); }
+  50% { box-shadow: 0 0 40px rgba(197,211,54,.3), 0 0 80px rgba(197,211,54,.1); }
+}
+
+/* ══════════════════════════════════════════════════
+   LOGIN SCREEN
+   ══════════════════════════════════════════════════ */
+#login-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  animation: fadeIn .4s ease;
+}
+#login-screen.hidden { display: none; }
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 52px 48px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow), var(--shadow-lima);
+  animation: fadeUp .5s ease;
+  position: relative;
+  overflow: hidden;
+}
+.login-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--navy), var(--lima), var(--navy));
+}
+
+.login-logo-wrap {
+  text-align: center; margin-bottom: 36px;
+}
+.login-logo {
+  height: 56px; width: auto;
+  filter: brightness(0) invert(1) brightness(0.9);
+}
+.login-logo-fallback {
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.login-logo-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--lima);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 22px; font-weight: 700;
+  color: var(--navy);
+}
+.login-brand-text {
+  text-align: left;
+}
+.login-brand-name {
+  font-size: 28px; font-weight: 700; color: var(--white);
+  letter-spacing: -0.5px;
+}
+.login-brand-sub {
+  font-size: 11px; color: var(--text-dim); margin-top: 2px;
+  font-style: italic;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 18px; font-weight: 600; color: var(--text);
+  margin-bottom: 8px;
+}
+.login-desc {
+  text-align: center;
+  font-size: 13px; color: var(--text-dim);
+  margin-bottom: 32px; line-height: 1.5;
+}
+
+.btn-ms {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 14px 24px;
+  background: var(--white);
+  color: #111;
+  border: none; border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.btn-ms:hover:not(:disabled) {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.4);
+}
+.btn-ms:disabled {
+  opacity: .6; cursor: not-allowed; transform: none;
+}
+
+.login-error {
+  display: none;
+  margin-top: 16px;
+  background: rgba(248,113,113,.1);
+  border: 1px solid rgba(248,113,113,.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px; color: var(--danger);
+  text-align: center;
+}
+
+.login-footer {
+  text-align: center; margin-top: 28px;
+  font-size: 11px; color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════
+   APP SHELL
+   ══════════════════════════════════════════════════ */
+#app { display: none; min-height: 100vh; position: relative; z-index: 1; }
+#app.visible { display: flex; flex-direction: column; animation: fadeIn .3s ease; }
+
+/* ── TOPBAR ─────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  height: 64px;
+  background: rgba(8,9,15,.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-left { display: flex; align-items: center; gap: 20px; }
+.topbar-logo { height: 32px; width: auto; }
+.topbar-logo-fallback {
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar-logo-dot {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--lima);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px; font-weight: 700; color: var(--navy);
+}
+.topbar-name {
+  font-size: 15px; font-weight: 700; color: var(--white);
+  letter-spacing: -0.3px;
+}
+.topbar-divider {
+  width: 1px; height: 24px;
+  background: var(--border2);
+}
+#last-update {
+  font-size: 11px; color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+#user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 14px 5px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+#user-chip:hover { background: var(--surface3); }
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy-light), var(--lima));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--white);
+  overflow: hidden; flex-shrink: 0;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.user-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.user-role { font-size: 10px; color: var(--text-dim); }
+
+.btn-logout {
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-logout:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── LOADING BAR ────────────────────────────────── */
+#loading-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--navy-light), var(--lima), var(--navy-light));
+  background-size: 200% auto;
+  animation: shimmer 1.4s linear infinite;
+  display: none;
+}
+#loading-bar.visible { display: block; }
+
+/* ── MAIN CONTENT ───────────────────────────────── */
+.main-content {
+  flex: 1;
+  padding: 28px 28px 40px;
+  max-width: 1700px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── SECTION HEADER ─────────────────────────────── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.section-title {
+  font-size: 22px; font-weight: 700; color: var(--white);
+  letter-spacing: -0.4px;
+}
+.section-title span { color: var(--lima); }
+.section-sub {
+  font-size: 13px; color: var(--text-dim); margin-top: 3px;
+}
+
+/* ── TABS ───────────────────────────────────────── */
+.tabs-wrap {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 5px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+.tab-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  border: none; border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface2); }
+.tab-btn.active {
+  background: var(--navy);
+  color: var(--lima);
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0,29,98,.5);
+}
+.tab-badge {
+  font-size: 10px; font-weight: 700;
+  background: var(--surface3);
+  color: var(--text-dim);
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 22px; text-align: center;
+}
+.tab-btn.active .tab-badge {
+  background: rgba(197,211,54,.2);
+  color: var(--lima);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeUp .3s ease; }
+
+/* ── KPI GRID ───────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(197,211,54,.25);
+  box-shadow: var(--shadow-lima);
+}
+.kpi-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--lima);
+  opacity: 0; transition: opacity .2s;
+}
+.kpi-card:hover::after { opacity: 1; }
+.kpi-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+.kpi-value {
+  font-size: 32px; font-weight: 700;
+  color: var(--white);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.kpi-value.lima { color: var(--lima); }
+.kpi-value.ok { color: var(--ok); }
+.kpi-value.warn { color: var(--warn); }
+.kpi-value.danger { color: var(--danger); }
+.kpi-value.info { color: var(--info); }
+.kpi-value.transit { color: var(--transit); }
+.kpi-sub {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 6px;
+}
+.kpi-icon {
+  position: absolute; right: 16px; top: 16px;
+  font-size: 22px; opacity: .15;
+}
+
+/* ── CHART GRID ─────────────────────────────────── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+}
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+.chart-title::before {
+  content: '';
+  display: block; width: 3px; height: 14px;
+  background: var(--lima); border-radius: 2px;
+}
+.chart-wrap { position: relative; }
+
+/* ── FILTERS ────────────────────────────────────── */
+.filters-bar {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.filter-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  flex-shrink: 0;
+}
+.filter-input, .filter-select {
+  padding: 8px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: var(--transition);
+}
+.filter-input:focus, .filter-select:focus {
+  border-color: rgba(197,211,54,.35);
+  box-shadow: 0 0 0 3px rgba(197,211,54,.08);
+}
+.filter-input { min-width: 240px; }
+.filter-select option { background: var(--surface2); }
+
+.btn-primary, .btn-secondary {
+  padding: 9px 18px;
+  border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.btn-primary {
+  background: var(--lima);
+  color: var(--navy);
+}
+.btn-primary:hover { background: #d4e23a; transform: translateY(-1px); }
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+.btn-secondary:hover { border-color: var(--lima); color: var(--lima); }
+
+/* ── TABLE ──────────────────────────────────────── */
+.table-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 12px;
+}
+.table-count {
+  font-size: 12px; color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+}
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 800px; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 10px; font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+  transition: color .15s;
+}
+thead th:hover { color: var(--lima); }
+tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  transition: background .15s;
+}
+tbody tr:hover { background: rgba(197,211,54,.04); }
+tbody td {
+  padding: 10px 14px;
+  font-size: 12px; color: var(--text);
+  max-width: 200px;
+}
+.cell-guia {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; color: var(--lima);
+  font-weight: 700;
+}
+
+/* ── STATUS PILLS ───────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.pill-ok      { background: rgba(74,222,128,.12); color: var(--ok); border: 1px solid rgba(74,222,128,.2); }
+.pill-warn    { background: rgba(250,204,21,.12);  color: var(--warn); border: 1px solid rgba(250,204,21,.2); }
+.pill-danger  { background: rgba(248,113,113,.12); color: var(--danger); border: 1px solid rgba(248,113,113,.2); }
+.pill-info    { background: rgba(96,165,250,.12);  color: var(--info); border: 1px solid rgba(96,165,250,.2); }
+.pill-transit { background: rgba(167,139,250,.12); color: var(--transit); border: 1px solid rgba(167,139,250,.2); }
+.pill-muted   { background: rgba(122,128,153,.10); color: var(--text-dim); border: 1px solid rgba(122,128,153,.15); }
+
+/* ── PAGINATION ─────────────────────────────────── */
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.pag-btn {
+  padding: 6px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.pag-btn:hover, .pag-btn.active {
+  background: var(--navy);
+  border-color: var(--lima);
+  color: var(--lima);
+}
+.pag-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ── EMPTY STATE ────────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+}
+.empty-icon { font-size: 48px; opacity: .3; margin-bottom: 12px; }
+.empty-text { color: var(--text-muted); font-size: 13px; }
+
+/* ── CARRIER CARD ───────────────────────────────── */
+.carrier-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--navy-dim), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+}
+.carrier-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--lima);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.carrier-name {
+  font-size: 20px; font-weight: 700; color: var(--white);
+}
+.carrier-total {
+  font-size: 12px; color: var(--text-dim); margin-top: 3px;
+}
+
+/* ── FOOTER ─────────────────────────────────────── */
+.footer {
+  padding: 20px 28px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: var(--text-muted);
+}
+.footer-logo {
+  height: 22px; width: auto;
+  filter: brightness(0) invert(0.4);
+}
+
+/* ── DATA LOADING STATE ─────────────────────────── */
+.loading-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(8,9,15,.75);
+  backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+.loading-overlay.visible { display: flex; }
+.loading-spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--surface3);
+  border-top-color: var(--lima);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+.loading-text {
+  font-size: 13px; color: var(--text-dim);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOADING OVERLAY ══════════ -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Cargando datos...</div>
+</div>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-fallback">
+        <div class="login-logo-circle">L</div>
+        <div class="login-brand-text">
+          <div class="login-brand-name">línea</div>
+          <div class="login-brand-sub">soluciones que te dan confianza</div>
+        </div>
+      </div>
+    </div>
+    <div class="login-title">Dashboard de Tracking</div>
+    <div class="login-desc">
+      Accede con tu cuenta corporativa de Línea Comunicaciones para visualizar el estado de las guías.
+    </div>
+    <button class="btn-ms" id="msLoginBtn" onclick="doMicrosoftLogin()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" style="width:20px;height:20px;flex-shrink:0;">
+        <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+        <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
+        <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
+        <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
+      </svg>
+      Iniciar sesión con Microsoft
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">Solo cuentas @lineacom.co · Sesión de 1 hora</div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app">
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo-fallback">
+        <div class="topbar-logo-dot">L</div>
+        <div class="topbar-name">línea · Tracking</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <span id="last-update">—</span>
+    </div>
+    <div class="topbar-right">
+      <div id="user-chip">
+        <div class="user-avatar" id="user-avatar-wrap">U</div>
+        <div>
+          <div class="user-name" id="user-name-el">Usuario</div>
+          <div class="user-role" id="user-role-el">Lineacom</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </nav>
+  <div id="loading-bar"></div>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Panel de <span>Guías</span></div>
+        <div class="section-sub" id="data-summary">Cargando datos desde el repositorio...</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="reloadData()">↺ Actualizar</button>
+        <button class="btn-primary" onclick="exportarExcelGeneral()">↓ Exportar Excel</button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs-wrap" id="tabs-wrap">
+      <button class="tab-btn active" data-tab="general" onclick="switchTab('general')">
+        🌐 General <span class="tab-badge" id="badge-general">—</span>
+      </button>
+      <button class="tab-btn" data-tab="COORDINADORA" onclick="switchTab('COORDINADORA')">
+        📦 Coordinadora <span class="tab-badge" id="badge-COORDINADORA">—</span>
+      </button>
+      <button class="tab-btn" data-tab="LOGICUARTAS" onclick="switchTab('LOGICUARTAS')">
+        🚚 Logicuartas <span class="tab-badge" id="badge-LOGICUARTAS">—</span>
+      </button>
+      <button class="tab-btn" data-tab="SERVIENTREGA" onclick="switchTab('SERVIENTREGA')">
+        🏃 Servientrega <span class="tab-badge" id="badge-SERVIENTREGA">—</span>
+      </button>
+      <button class="tab-btn" data-tab="VELOCES" onclick="switchTab('VELOCES')">
+        ⚡ Veloces <span class="tab-badge" id="badge-VELOCES">—</span>
+      </button>
+    </div>
+
+    <!-- ─── TAB: GENERAL ─────────────────────────── -->
+    <div class="tab-content active" id="tab-general">
+      <!-- KPIs globales -->
+      <div class="kpi-grid" id="kpis-general"></div>
+
+      <!-- Gráficas -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">Distribución por Estado</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-estados-general"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Guías por Transportadora</div>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-transportadoras"></canvas>
+          </div>
+        </div>
+        <div class="chart-card wide">
+          <div class="chart-title">Evolución Temporal (por Fecha de Procesamiento)</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="chart-timeline"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla general -->
+      <div class="filters-bar">
+        <span class="filter-label">Filtros</span>
+        <input class="filter-input" type="text" id="search-general" placeholder="Buscar guía, destinatario, ciudad..." oninput="filterGeneral()">
+        <select class="filter-select" id="filter-transportadora" onchange="filterGeneral()">
+          <option value="">Todas las transportadoras</option>
+          <option value="COORDINADORA">Coordinadora</option>
+          <option value="LOGICUARTAS">Logicuartas</option>
+          <option value="SERVIENTREGA">Servientrega</option>
+          <option value="VELOCES">Veloces</option>
+        </select>
+        <select class="filter-select" id="filter-estado" onchange="filterGeneral()">
+          <option value="">Todos los estados</option>
+        </select>
+        <button class="btn-secondary" onclick="clearFilters()">✕ Limpiar</button>
+      </div>
+      <div class="table-container">
+        <div class="table-header">
+          <span class="table-count" id="count-general">0 registros</span>
+          <button class="btn-primary" onclick="exportarExcelFiltrado()">↓ Exportar filtrado</button>
+        </div>
+        <div class="table-scroll">
+          <div id="table-general-wrap"></div>
+        </div>
+        <div class="pagination" id="pag-general"></div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: Por transportadora (plantilla genérica) ─── -->
+    <div class="tab-content" id="tab-COORDINADORA">
+      <div id="content-COORDINADORA"></div>
+    </div>
+    <div class="tab-content" id="tab-LOGICUARTAS">
+      <div id="content-LOGICUARTAS"></div>
+    </div>
+    <div class="tab-content" id="tab-SERVIENTREGA">
+      <div id="content-SERVIENTREGA"></div>
+    </div>
+    <div class="tab-content" id="tab-VELOCES">
+      <div id="content-VELOCES"></div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <span>Línea Comunicaciones S.A.S · Dashboard de Tracking de Guías</span>
+    <span id="footer-year" style="font-family:'Space Mono',monospace;font-size:10px;"></span>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS
+     ══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── CONFIG ─────────────────────────────────────────
+const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/Segoloo/GuiasLineaComunicaciones/main/data.json.gz';
+const PAGE_SIZE = 60;
+
+// ── ESTADO ─────────────────────────────────────────
+let RAW = [];
+let FILTERED_GENERAL = [];
+let pagGeneral = 1;
+let sortCol = -1, sortDir = 1;
+let chartInstances = {};
+let carrierCharts = {};
+
+const CARRIER_ICONS = {
+  COORDINADORA: '📦', LOGICUARTAS: '🚚', SERVIENTREGA: '🏃', VELOCES: '⚡'
+};
+const CARRIER_COLORS = {
+  COORDINADORA: '#60a5fa', LOGICUARTAS: '#a78bfa', SERVIENTREGA: '#f97316', VELOCES: '#C5D336'
+};
+
+// ── PALETA CHARTS ──────────────────────────────────
+const PALETTE = ['#C5D336','#60a5fa','#f97316','#a78bfa','#4ade80','#f43f5e','#facc15','#2dd4bf'];
+
+// ══════════════════════════════════════════════════
+//  AUTH — Microsoft (MSAL)
+// ══════════════════════════════════════════════════
+const MSAL_CONFIG = {
+  auth: {
+    clientId: 'febe226c-0265-4fb2-b34e-3beebbb9fee8',
+    authority: 'https://login.microsoftonline.com/af1a17b2-5d34-4f58-8b6c-6b94c6cd87ea',
+    redirectUri: window.location.origin + window.location.pathname,
+    navigateToLoginRequestUrl: true
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+};
+const MS_SCOPES = ['openid', 'profile', 'email', 'User.Read'];
+const ALLOWED_DOMAIN = 'lineacom.co';
+
+let _msalInstance = null;
+let _sessionTimer = null;
+
+async function _loadMSAL() {
+  if (window.msal) return window.msal;
+  const URLS = [
+    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js',
+    'https://alcdn.msftauth.net/browser/2.38.3/js/msal-browser.min.js',
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+  ];
+  for (const url of URLS) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+      if (window.msal) return window.msal;
+    } catch (_) {}
+  }
+  throw new Error('No se pudo cargar MSAL.');
+}
+
+async function doMicrosoftLogin() {
+  const btn = document.getElementById('msLoginBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Conectando con Microsoft...'; }
+  document.getElementById('login-error').style.display = 'none';
+  try {
+    const msal = await _loadMSAL();
+    _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    await _msalInstance.initialize();
+    const result = await _msalInstance.loginPopup({ scopes: MS_SCOPES, prompt: 'select_account' });
+    const email = result.account?.username || '';
+    const domain = email.split('@')[1]?.toLowerCase();
+    if (domain !== ALLOWED_DOMAIN) {
+      await _msalInstance.logoutPopup({ account: result.account }).catch(() => {});
+      _showLoginError(`Acceso denegado. Solo cuentas @${ALLOWED_DOMAIN}.<br><small>Tu cuenta: ${email}</small>`);
+      return;
+    }
+    let displayName = result.account.name || email;
+    let jobTitle = '';
+    let photo = null;
+    try {
+      const gt = await _msalInstance.acquireTokenSilent({ scopes: ['User.Read'], account: result.account });
+      const pr = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,jobTitle', {
+        headers: { Authorization: `Bearer ${gt.accessToken}` }
+      });
+      if (pr.ok) { const p = await pr.json(); displayName = p.displayName||displayName; jobTitle = p.jobTitle||''; }
+      const phr = await fetch('https://graph.microsoft.com/v1.0/me/photo/$value', {
+        headers: { Authorization: `Bearer ${gt.accessToken}` }
+      });
+      if (phr.ok) {
+        const blob = await phr.blob();
+        photo = await new Promise(res => { const r = new FileReader(); r.onload = ()=>res(r.result); r.readAsDataURL(blob); });
+      }
+    } catch (_) {}
+    _enterApp({ name: displayName, role: jobTitle, email, photo });
+  } catch (err) {
+    _showLoginError(err.errorCode === 'user_cancelled' ? 'Inicio cancelado.' : 'Error al conectar con Microsoft.');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" style="width:20px;height:20px;flex-shrink:0;"><rect x="1" y="1" width="10" height="10" fill="#f25022"/><rect x="12" y="1" width="10" height="10" fill="#7fba00"/><rect x="1" y="12" width="10" height="10" fill="#00a4ef"/><rect x="12" y="12" width="10" height="10" fill="#ffb900"/></svg> Iniciar sesión con Microsoft`;
+    }
+  }
+}
+
+function _showLoginError(msg) {
+  const e = document.getElementById('login-error');
+  e.innerHTML = '⚠ ' + msg;
+  e.style.display = 'block';
+}
+
+function _enterApp(profile) {
+  // Chip usuario
+  const wa = document.getElementById('user-avatar-wrap');
+  const wn = document.getElementById('user-name-el');
+  const wr = document.getElementById('user-role-el');
+  if (profile.photo) {
+    wa.innerHTML = `<img src="${profile.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    wa.textContent = (profile.name||'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  }
+  if (wn) wn.textContent = profile.name||'';
+  if (wr) wr.textContent = profile.role||'Lineacom';
+
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('footer-year').textContent = `v3.0 · ${new Date().getFullYear()}`;
+
+  _sessionTimer = setTimeout(() => {
+    alert('⏰ Sesión expirada.');
+    doLogout();
+  }, 3600000);
+
+  loadData();
+}
+
+function doLogout() {
+  clearTimeout(_sessionTimer);
+  if (_msalInstance) {
+    const accs = _msalInstance.getAllAccounts();
+    if (accs.length) _msalInstance.logoutPopup({ account: accs[0] }).catch(() => {});
+  }
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').classList.remove('hidden');
+  RAW = []; FILTERED_GENERAL = [];
+}
+
+// ══════════════════════════════════════════════════
+//  CARGA DE DATOS (GitHub → GZ → JSON)
+// ══════════════════════════════════════════════════
+function showLoading(msg='Cargando datos...') {
+  document.getElementById('loading-bar').classList.add('visible');
+}
+function hideLoading() {
+  document.getElementById('loading-bar').classList.remove('visible');
+}
+
+async function loadData() {
+  showLoading();
+  document.getElementById('data-summary').textContent = 'Descargando datos desde GitHub...';
+  try {
+    const res = await fetch(GITHUB_RAW_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ab = await res.arrayBuffer();
+
+    // Descomprimir gzip usando DecompressionStream
+    const ds = new DecompressionStream('gzip');
+    const writer = ds.writable.getWriter();
+    writer.write(new Uint8Array(ab));
+    writer.close();
+
+    const reader = ds.readable.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const total = chunks.reduce((s, c) => s + c.length, 0);
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+
+    const jsonStr = new TextDecoder('utf-8').decode(merged);
+    const payload = JSON.parse(jsonStr);
+
+    RAW = payload.guias || [];
+    const ts = payload.generado_en || '—';
+    document.getElementById('last-update').textContent = `Actualizado: ${ts}`;
+    document.getElementById('data-summary').textContent =
+      `${RAW.length.toLocaleString()} registros históricos · ${ts}`;
+
+    initDashboard();
+  } catch (err) {
+    console.error('[loadData]', err);
+    document.getElementById('data-summary').textContent = '⚠ Error al cargar datos: ' + err.message;
+  }
+  hideLoading();
+}
+
+async function reloadData() { await loadData(); }
+
+// ══════════════════════════════════════════════════
+//  DASHBOARD INIT
+// ══════════════════════════════════════════════════
+function initDashboard() {
+  const transportadoras = ['COORDINADORA', 'LOGICUARTAS', 'SERVIENTREGA', 'VELOCES'];
+
+  // Badges tabs
+  document.getElementById('badge-general').textContent = RAW.length;
+  transportadoras.forEach(t => {
+    const cnt = RAW.filter(r => r.TRANSPORTADORA === t).length;
+    const el = document.getElementById('badge-' + t);
+    if (el) el.textContent = cnt;
+  });
+
+  // Poblar filtro de estado
+  const estados = [...new Set(RAW.map(r => r.ESTADO).filter(Boolean))].sort();
+  const selEstado = document.getElementById('filter-estado');
+  estados.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e; opt.textContent = e;
+    selEstado.appendChild(opt);
+  });
+
+  // Render general
+  renderGeneral();
+  // Render cada transportadora (lazy: solo si tab está activo)
+  transportadoras.forEach(t => renderCarrier(t));
+}
+
+// ══════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER GENERAL
+// ══════════════════════════════════════════════════
+function renderGeneral() {
+  const data = RAW;
+  // KPIs
+  const total = data.length;
+  const entregadas = data.filter(r => /ENTREGAD/i.test(r.ESTADO)).length;
+  const transito = data.filter(r => /TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/i.test(r.ESTADO)).length;
+  const novedad = data.filter(r => /NOVEDAD/i.test(r.ESTADO) || (r.NOVEDAD && r.NOVEDAD !== 'NO APLICA' && r.NOVEDAD.trim() !== '')).length;
+  const pendientes = data.filter(r => /PEND|INGRES/i.test(r.ESTADO)).length;
+  const devueltas = data.filter(r => /DEVOLU|DEVUELT|REMITENTE/i.test(r.ESTADO)).length;
+
+  const kpis = [
+    { label: 'Total Guías', value: total.toLocaleString(), cls: 'lima', icon: '📋' },
+    { label: 'Entregadas', value: entregadas.toLocaleString(), cls: 'ok', icon: '✅', sub: pct(entregadas, total) },
+    { label: 'En Tránsito', value: transito.toLocaleString(), cls: 'transit', icon: '🚚', sub: pct(transito, total) },
+    { label: 'Con Novedad', value: novedad.toLocaleString(), cls: 'warn', icon: '⚠️', sub: pct(novedad, total) },
+    { label: 'Pendientes', value: pendientes.toLocaleString(), cls: 'info', icon: '⏳', sub: pct(pendientes, total) },
+    { label: 'Devueltas', value: devueltas.toLocaleString(), cls: 'danger', icon: '↩️', sub: pct(devueltas, total) },
+  ];
+  document.getElementById('kpis-general').innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-icon">${k.icon}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.cls}">${k.value}</div>
+      ${k.sub ? `<div class="kpi-sub">${k.sub} del total</div>` : ''}
+    </div>`).join('');
+
+  // Charts
+  renderChartEstados('chart-estados-general', data);
+  renderChartTransportadoras('chart-transportadoras', data);
+  renderChartTimeline('chart-timeline', data);
+
+  // Tabla
+  FILTERED_GENERAL = [...data];
+  pagGeneral = 1;
+  renderTableGeneral();
+}
+
+function filterGeneral() {
+  const search = (document.getElementById('search-general').value || '').toLowerCase().trim();
+  const trans = document.getElementById('filter-transportadora').value;
+  const estado = document.getElementById('filter-estado').value;
+
+  FILTERED_GENERAL = RAW.filter(r => {
+    if (trans && r.TRANSPORTADORA !== trans) return false;
+    if (estado && r.ESTADO !== estado) return false;
+    if (search) {
+      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.TRANSPORTADORA, r.ESTADO, r.DOCUMENTO]
+        .map(v => (v||'').toLowerCase()).join(' ');
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  pagGeneral = 1;
+  renderTableGeneral();
+}
+
+function clearFilters() {
+  document.getElementById('search-general').value = '';
+  document.getElementById('filter-transportadora').value = '';
+  document.getElementById('filter-estado').value = '';
+  filterGeneral();
+}
+
+function renderTableGeneral() {
+  const total = FILTERED_GENERAL.length;
+  document.getElementById('count-general').textContent = `${total.toLocaleString()} registros`;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const slice = FILTERED_GENERAL.slice((pagGeneral - 1) * PAGE_SIZE, pagGeneral * PAGE_SIZE);
+
+  const cols = [
+    { label: 'Guía',         fn: r => `<span class="cell-guia">${r.GUIA||'—'}</span>` },
+    { label: 'Transportadora', fn: r => `<span style="color:${CARRIER_COLORS[r.TRANSPORTADORA]||'#aaa'};font-weight:600;font-size:11px;">${r.TRANSPORTADORA||'—'}</span>` },
+    { label: 'Estado',       fn: r => statusPill(r.ESTADO||'') },
+    { label: 'Destinatario', fn: r => esc(r.NOMBRE_DESTINATARIO||'—') },
+    { label: 'Ciudad Destino', fn: r => esc(r.CIUDAD_DESTINO||'—') },
+    { label: 'Último Mov.',  fn: r => esc(r.ULTIMO_MOVIMIENTO||'—') },
+    { label: 'Novedad',      fn: r => { const n=r.NOVEDAD||''; return n && n!=='NO APLICA' ? `<span style="color:var(--warn);font-size:11px;">${esc(n.substring(0,80))}</span>` : '<span style="color:var(--text-muted)">—</span>'; } },
+    { label: 'F. Entrega',   fn: r => esc(r.FECHA_ENTREGA||'—') },
+  ];
+
+  if (!slice.length) {
+    document.getElementById('table-general-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No hay registros que coincidan con los filtros.</div></div>';
+    document.getElementById('pag-general').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('table-general-wrap').innerHTML = `
+    <table>
+      <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${slice.map(r => `<tr>${cols.map(c => `<td>${c.fn(r)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+
+  mkPagination('pag-general', pagGeneral, pages, (p) => { pagGeneral = p; renderTableGeneral(); });
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER POR TRANSPORTADORA
+// ══════════════════════════════════════════════════
+function renderCarrier(carrier) {
+  const data = RAW.filter(r => r.TRANSPORTADORA === carrier);
+  const container = document.getElementById('content-' + carrier);
+  if (!container) return;
+
+  const total = data.length;
+  const entregadas = data.filter(r => /ENTREGAD/i.test(r.ESTADO)).length;
+  const transito = data.filter(r => /TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/i.test(r.ESTADO)).length;
+  const novedad = data.filter(r => /NOVEDAD/i.test(r.ESTADO) || (r.NOVEDAD && r.NOVEDAD !== 'NO APLICA' && r.NOVEDAD.trim())).length;
+  const pendientes = data.filter(r => /PEND|INGRES/i.test(r.ESTADO)).length;
+  const devueltas = data.filter(r => /DEVOLU|DEVUELT|REMITENTE/i.test(r.ESTADO)).length;
+  const pctEntr = total ? Math.round(entregadas / total * 100) : 0;
+
+  container.innerHTML = `
+    <div class="carrier-banner">
+      <div class="carrier-icon">${CARRIER_ICONS[carrier]||'📋'}</div>
+      <div>
+        <div class="carrier-name">${carrier}</div>
+        <div class="carrier-total">${total.toLocaleString()} guías registradas · ${pctEntr}% entregadas</div>
+      </div>
+      <div style="margin-left:auto;">
+        <button class="btn-primary" onclick="exportarCarrier('${carrier}')">↓ Exportar Excel</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-icon">📋</div><div class="kpi-label">Total</div><div class="kpi-value lima">${total.toLocaleString()}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-label">Entregadas</div><div class="kpi-value ok">${entregadas.toLocaleString()}</div><div class="kpi-sub">${pct(entregadas,total)}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">🚚</div><div class="kpi-label">En Tránsito</div><div class="kpi-value transit">${transito.toLocaleString()}</div><div class="kpi-sub">${pct(transito,total)}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-label">Novedad</div><div class="kpi-value warn">${novedad.toLocaleString()}</div><div class="kpi-sub">${pct(novedad,total)}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">⏳</div><div class="kpi-label">Pendientes</div><div class="kpi-value info">${pendientes.toLocaleString()}</div><div class="kpi-sub">${pct(pendientes,total)}</div></div>
+      <div class="kpi-card"><div class="kpi-icon">↩️</div><div class="kpi-label">Devueltas</div><div class="kpi-value danger">${devueltas.toLocaleString()}</div><div class="kpi-sub">${pct(devueltas,total)}</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Estados — ${carrier}</div>
+        <div class="chart-wrap" style="height:250px;"><canvas id="chart-estados-${carrier}"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Ciudades Destino</div>
+        <div class="chart-wrap" style="height:250px;"><canvas id="chart-ciudades-${carrier}"></canvas></div>
+      </div>
+    </div>
+
+    <div class="filters-bar">
+      <span class="filter-label">Filtrar</span>
+      <input class="filter-input" type="text" id="search-${carrier}" placeholder="Buscar guía, destinatario..." oninput="filterCarrier('${carrier}')">
+      <select class="filter-select" id="filter-estado-${carrier}" onchange="filterCarrier('${carrier}')">
+        <option value="">Todos los estados</option>
+        ${[...new Set(data.map(r=>r.ESTADO).filter(Boolean))].sort().map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="table-container">
+      <div class="table-header">
+        <span class="table-count" id="count-${carrier}">— registros</span>
+      </div>
+      <div class="table-scroll">
+        <div id="table-${carrier}-wrap"></div>
+      </div>
+      <div class="pagination" id="pag-${carrier}"></div>
+    </div>
+  `;
+
+  // Render charts
+  setTimeout(() => {
+    renderChartEstados('chart-estados-' + carrier, data, CARRIER_COLORS[carrier]);
+    renderChartCiudades('chart-ciudades-' + carrier, data);
+    // tabla inicial
+    renderTableCarrier(carrier, data, data);
+  }, 50);
+}
+
+const _carrierFiltered = {};
+const _carrierPage = {};
+
+function filterCarrier(carrier) {
+  const search = (document.getElementById('search-' + carrier)?.value || '').toLowerCase().trim();
+  const estado = document.getElementById('filter-estado-' + carrier)?.value || '';
+  const base = RAW.filter(r => r.TRANSPORTADORA === carrier);
+  _carrierFiltered[carrier] = base.filter(r => {
+    if (estado && r.ESTADO !== estado) return false;
+    if (search) {
+      const hay = [r.GUIA, r.NOMBRE_DESTINATARIO, r.CIUDAD_DESTINO, r.ESTADO, r.DOCUMENTO]
+        .map(v=>(v||'').toLowerCase()).join(' ');
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  _carrierPage[carrier] = 1;
+  renderTableCarrier(carrier, _carrierFiltered[carrier] || base, RAW.filter(r=>r.TRANSPORTADORA===carrier));
+}
+
+function renderTableCarrier(carrier, data, base) {
+  if (!_carrierFiltered[carrier]) _carrierFiltered[carrier] = base;
+  if (!_carrierPage[carrier]) _carrierPage[carrier] = 1;
+  const fd = _carrierFiltered[carrier];
+  const page = _carrierPage[carrier];
+  const pages = Math.max(1, Math.ceil(fd.length / PAGE_SIZE));
+  const slice = fd.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  document.getElementById('count-' + carrier).textContent = `${fd.length.toLocaleString()} registros`;
+
+  const cols = [
+    { label: 'Guía',        fn: r => `<span class="cell-guia">${r.GUIA||'—'}</span>` },
+    { label: 'Estado',      fn: r => statusPill(r.ESTADO||'') },
+    { label: 'Destinatario', fn: r => esc(r.NOMBRE_DESTINATARIO||'—') },
+    { label: 'Dirección',   fn: r => `<span style="font-size:11px;color:var(--text-dim);">${esc((r.DIRECCION_DESTINATARIO||'—').substring(0,50))}</span>` },
+    { label: 'Ciudad Dest.',fn: r => esc(r.CIUDAD_DESTINO||'—') },
+    { label: 'Origen',      fn: r => esc(r.CIUDAD_ORIGEN||'—') },
+    { label: 'Último Mov.', fn: r => esc(r.ULTIMO_MOVIMIENTO||'—') },
+    { label: 'F. Entrega',  fn: r => esc(r.FECHA_ENTREGA||'—') },
+    { label: 'Novedad',     fn: r => { const n=r.NOVEDAD||''; return n && n!=='NO APLICA' ? `<span style="color:var(--warn);font-size:11px;">${esc(n.substring(0,70))}</span>` : '<span style="color:var(--text-muted)">—</span>'; } },
+  ];
+
+  if (!slice.length) {
+    document.getElementById('table-' + carrier + '-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Sin resultados.</div></div>';
+    document.getElementById('pag-' + carrier).innerHTML = '';
+    return;
+  }
+
+  document.getElementById('table-' + carrier + '-wrap').innerHTML = `
+    <table>
+      <thead><tr>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${slice.map(r=>`<tr>${cols.map(c=>`<td>${c.fn(r)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+
+  mkPagination('pag-' + carrier, page, pages, (p) => {
+    _carrierPage[carrier] = p;
+    renderTableCarrier(carrier, _carrierFiltered[carrier], RAW.filter(r=>r.TRANSPORTADORA===carrier));
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: '#7a8099', font: { family: 'DM Sans', size: 11 } } },
+    tooltip: {
+      backgroundColor: 'rgba(13,15,26,.95)',
+      titleColor: '#C5D336',
+      bodyColor: '#e8eaf0',
+      borderColor: 'rgba(197,211,54,.2)',
+      borderWidth: 1,
+      padding: 12,
+    }
+  }
+};
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function renderChartEstados(canvasId, data, accentColor) {
+  destroyChart(canvasId);
+  const counts = {};
+  data.forEach(r => { const e = r.ESTADO||'SIN ESTADO'; counts[e] = (counts[e]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(([k])=>k),
+      datasets: [{ data: sorted.map(([,v])=>v), backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: { ...CHART_DEFAULTS, cutout: '65%' }
+  });
+}
+
+function renderChartTransportadoras(canvasId, data) {
+  destroyChart(canvasId);
+  const counts = {};
+  data.forEach(r => { const t = r.TRANSPORTADORA||'OTRO'; counts[t] = (counts[t]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: entries.map(([k])=>k),
+      datasets: [{
+        data: entries.map(([,v])=>v),
+        backgroundColor: entries.map(([k]) => CARRIER_COLORS[k]||'#C5D336'),
+        borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks: { color: '#7a8099', font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#7a8099', font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(255,255,255,.04)' } }
+      },
+      plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } }
+    }
+  });
+}
+
+function renderChartTimeline(canvasId, data) {
+  destroyChart(canvasId);
+  const byDate = {};
+  data.forEach(r => {
+    const d = (r.FECHA_PROCESAMIENTO||'').substring(0, 10);
+    if (d) byDate[d] = (byDate[d]||0)+1;
+  });
+  const sorted = Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(([k])=>k),
+      datasets: [{
+        label: 'Registros procesados',
+        data: sorted.map(([,v])=>v),
+        borderColor: '#C5D336',
+        backgroundColor: 'rgba(197,211,54,.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: '#C5D336',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      scales: {
+        x: { ticks: { color: '#7a8099', maxTicksLimit: 12, font:{family:'DM Sans',size:10} }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#7a8099', font:{family:'DM Sans',size:10} }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+}
+
+function renderChartCiudades(canvasId, data) {
+  destroyChart(canvasId);
+  const counts = {};
+  data.forEach(r => { const c = r.CIUDAD_DESTINO; if (c && c !== 'NO APLICA') counts[c] = (counts[c]||0)+1; });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(([k])=>k),
+      datasets: [{
+        data: top.map(([,v])=>v),
+        backgroundColor: 'rgba(197,211,54,.7)',
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      indexAxis: 'y',
+      scales: {
+        x: { ticks:{color:'#7a8099',font:{family:'DM Sans',size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y: { ticks:{color:'#e8eaf0',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(255,255,255,.04)'} }
+      },
+      plugins: { ...CHART_DEFAULTS.plugins, legend:{display:false} }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════
+function pct(n, total) {
+  if (!total) return '0%';
+  return Math.round(n / total * 100) + '%';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function statusPill(estado) {
+  const e = (estado||'').toUpperCase();
+  let cls = 'muted', label = estado||'—';
+  if (/ENTREGAD/.test(e)) cls = 'ok';
+  else if (/NOVEDAD/.test(e)) cls = 'warn';
+  else if (/DEVOLU|DEVUELT|REMITENTE/.test(e)) cls = 'danger';
+  else if (/TRÁN|TRAN|DESPACHA|EN RUTA|DESPACHAD/.test(e)) cls = 'transit';
+  else if (/PEND|INGRES/.test(e)) cls = 'info';
+  return `<span class="pill pill-${cls}">${esc(label.substring(0,30))}</span>`;
+}
+
+function mkPagination(containerId, current, pages, onPage) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (pages <= 1) { el.innerHTML = ''; return; }
+
+  const range = [];
+  for (let i = Math.max(1, current-2); i <= Math.min(pages, current+2); i++) range.push(i);
+
+  el.innerHTML = `
+    <button class="pag-btn" onclick="(${onPage.toString()})(${current-1})" ${current<=1?'disabled':''}>←</button>
+    ${current > 3 ? `<button class="pag-btn" onclick="(${onPage.toString()})(1)">1</button><span style="color:var(--text-muted);padding:0 4px;">…</span>` : ''}
+    ${range.map(p => `<button class="pag-btn ${p===current?'active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`).join('')}
+    ${current < pages-2 ? `<span style="color:var(--text-muted);padding:0 4px;">…</span><button class="pag-btn" onclick="(${onPage.toString()})(${pages})">${pages}</button>` : ''}
+    <button class="pag-btn" onclick="(${onPage.toString()})(${current+1})" ${current>=pages?'disabled':''}>→</button>
+    <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${current} / ${pages}</span>
+  `;
+}
+
+// ══════════════════════════════════════════════════
+//  EXPORTAR EXCEL
+// ══════════════════════════════════════════════════
+function _toExcelData(rows) {
+  return rows.map(r => ({
+    'Guía':               r.GUIA||'',
+    'Documento':          r.DOCUMENTO||'',
+    'Transportadora':     r.TRANSPORTADORA||'',
+    'Estado':             r.ESTADO||'',
+    'Último Movimiento':  r.ULTIMO_MOVIMIENTO||'',
+    'Novedad':            r.NOVEDAD||'',
+    'Ciudad Origen':      r.CIUDAD_ORIGEN||'',
+    'Ciudad Destino':     r.CIUDAD_DESTINO||'',
+    'Nombre Destinatario':r.NOMBRE_DESTINATARIO||'',
+    'Dirección':          r.DIRECCION_DESTINATARIO||'',
+    'Teléfono':           r.TELEFONO_DESTINATARIO||'',
+    'Fecha Despacho':     r.FECHA_DESPACHO||'',
+    'Fecha Entrega':      r.FECHA_ENTREGA||'',
+    'Fecha Procesamiento':r.FECHA_PROCESAMIENTO||'',
+  }));
+}
+
+function _exportXlsx(data, sheetName, filename) {
+  if (!data.length) { alert('Sin datos para exportar.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = Object.keys(data[0]).map(k => ({
+    wch: Math.max(k.length + 2, ...data.slice(0,50).map(r => String(r[k]||'').length))
+  }));
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportarExcelGeneral() {
+  _exportXlsx(_toExcelData(RAW), 'Todas las Guías', 'Tracking_Lineacom_Total');
+}
+
+function exportarExcelFiltrado() {
+  _exportXlsx(_toExcelData(FILTERED_GENERAL), 'Filtrado', 'Tracking_Lineacom_Filtrado');
+}
+
+function exportarCarrier(carrier) {
+  const data = _carrierFiltered[carrier] || RAW.filter(r => r.TRANSPORTADORA === carrier);
+  _exportXlsx(_toExcelData(data), carrier, `Tracking_${carrier}`);
+}
+</script>
+
+<!-- MSAL se carga dinámicamente en doMicrosoftLogin() -->
+</body>
+</html>
