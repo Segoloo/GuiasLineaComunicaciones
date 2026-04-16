@@ -668,11 +668,14 @@ function renderTableCarrier(carrier, base, _unused) {
       <tbody>${slice.map(r=>`<tr>${cols.map(c=>`<td>${c.fn(r)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>`;
 
-  mkPagination('pag-' + carrier, page, pages, p => {
-    _carrierPage[carrier] = p;
-    renderTableCarrier(carrier, _carrierFiltered[carrier], RAW.filter(r=>r.TRANSPORTADORA===carrier));
-  });
+  mkPagination('pag-' + carrier, page, pages, p => changeCarrierPage(carrier, p));
 }
+
+// Función global para evitar ReferenceError en pagination closures
+window.changeCarrierPage = function(carrier, p) {
+  _carrierPage[carrier] = p;
+  renderTableCarrier(carrier, _carrierFiltered[carrier], RAW.filter(r => r.TRANSPORTADORA === carrier));
+};
 
 // ══════════════════════════════════════════════════
 //  CHARTS
@@ -804,7 +807,7 @@ function renderChartCiudades(canvasId, data) {
 
 function renderChartTasaEntrega(canvasId, data) {
   destroyChart(canvasId);
-  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES','INTERRAPIDISIMO'];
   const labels = [], entregPct = [], novedPct = [], transitPct = [];
   carriers.forEach(c => {
     const rows = data.filter(r => r.TRANSPORTADORA === c);
@@ -944,6 +947,10 @@ function normalizeEstado(raw) {
   // PENDIENTES — incluye EN ALISTAMIENTO DEL CLIENTE y RECIBIDO DEL CLIENTE
   if (/^INGRESADO$|^GU[IÍ]A GENERADA$|^RECIBIDO DEL CLIENTE$|^EN ALISTAMIENTO DEL CLIENTE$|^PEND/.test(e)) return 'pendiente';
 
+  // INTERRAPIDISIMO ADICIONALES
+  if (/^EN PROCESAMIENTO$|^EN CAMINO/.test(e)) return 'transito';
+  if (/T[ÚU] ENV[ÍI]O FUE ENTREGADO|YA PUEDES RECOGER TU ENV[ÍI]O/.test(e)) return 'entregada';
+
   return 'otro';
 }
 
@@ -992,11 +999,11 @@ function mkPagination(containerId, current, pages, onPage) {
   for (let i = Math.max(1, current-2); i <= Math.min(pages, current+2); i++) range.push(i);
 
   el.innerHTML = `
-    <button class="pag-btn" onclick="(${onPage.toString()})(${current-1})" ${current<=1?'disabled':''}>←</button>
-    ${current > 3 ? `<button class="pag-btn" onclick="(${onPage.toString()})(1)">1</button><span style="color:var(--text-muted);padding:0 4px;">…</span>` : ''}
-    ${range.map(p => `<button class="pag-btn ${p===current?'active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`).join('')}
-    ${current < pages-2 ? `<span style="color:var(--text-muted);padding:0 4px;">…</span><button class="pag-btn" onclick="(${onPage.toString()})(${pages})">${pages}</button>` : ''}
-    <button class="pag-btn" onclick="(${onPage.toString()})(${current+1})" ${current>=pages?'disabled':''}>→</button>
+    <button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${current - 1})" ${current <= 1 ? 'disabled' : ''}>←</button>
+    ${current > 3 ? `<button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(1)">1</button><span style="color:var(--text-muted);padding:0 4px;">…</span>` : ''}
+    ${range.map(p => `<button class="pag-btn ${p === current ? 'active' : ''}" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${p})">${p}</button>`).join('')}
+    ${current < pages - 2 ? `<span style="color:var(--text-muted);padding:0 4px;">…</span><button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${pages})">${pages}</button>` : ''}
+    <button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${current + 1})" ${current >= pages ? 'disabled' : ''}>→</button>
     <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${current} / ${pages}</span>
   `;
 }
@@ -1008,7 +1015,7 @@ function mkPagination(containerId, current, pages, onPage) {
 // Devoluciones y Novedades absolutas por transportadora
 function renderChartDevNovCarrier(canvasId, data) {
   destroyChart(canvasId);
-  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES','INTERRAPIDISIMO'];
   const devData = [], novData = [], cancData = [], labels = [];
   carriers.forEach(c => {
     const rows = data.filter(r => r.TRANSPORTADORA === c);
@@ -1072,7 +1079,7 @@ function renderChartPendTransito(canvasId, data) {
 // Tiempo promedio de entrega por transportadora
 function renderChartTiempoEntrega(canvasId, data) {
   destroyChart(canvasId);
-  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES'];
+  const carriers = ['COORDINADORA','LOGICUARTAS','SERVIENTREGA','VELOCES','INTERRAPIDISIMO'];
   const labels = [], avgDays = [];
   carriers.forEach(c => {
     const rows = data.filter(r => r.TRANSPORTADORA === c && r.FECHA_DESPACHO && r.FECHA_ENTREGA && normalizeEstado(r.ESTADO) === 'entregada');
