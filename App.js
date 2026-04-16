@@ -509,8 +509,13 @@ function renderTableGeneral() {
       <tbody>${slice.map(r => `<tr>${cols.map(c => `<td>${c.fn(r)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>`;
 
-  mkPagination('pag-general', pagGeneral, pages, p => { pagGeneral = p; renderTableGeneral(); });
+  mkPagination('pag-general', pagGeneral, pages, 'changeGeneralPage({P})');
 }
+
+window.changeGeneralPage = function(p) {
+  pagGeneral = p;
+  renderTableGeneral();
+};
 
 // ══════════════════════════════════════════════════
 //  RENDER POR TRANSPORTADORA
@@ -668,10 +673,9 @@ function renderTableCarrier(carrier, base, _unused) {
       <tbody>${slice.map(r=>`<tr>${cols.map(c=>`<td>${c.fn(r)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>`;
 
-  mkPagination('pag-' + carrier, page, pages, p => changeCarrierPage(carrier, p));
+  mkPagination('pag-' + carrier, page, pages, `changeCarrierPage('${carrier}', {P})`);
 }
 
-// Función global para evitar ReferenceError en pagination closures
 window.changeCarrierPage = function(carrier, p) {
   _carrierPage[carrier] = p;
   renderTableCarrier(carrier, _carrierFiltered[carrier], RAW.filter(r => r.TRANSPORTADORA === carrier));
@@ -947,9 +951,13 @@ function normalizeEstado(raw) {
   // PENDIENTES — incluye EN ALISTAMIENTO DEL CLIENTE y RECIBIDO DEL CLIENTE
   if (/^INGRESADO$|^GU[IÍ]A GENERADA$|^RECIBIDO DEL CLIENTE$|^EN ALISTAMIENTO DEL CLIENTE$|^PEND/.test(e)) return 'pendiente';
 
-  // INTERRAPIDISIMO ADICIONALES
-  if (/^EN PROCESAMIENTO$|^EN CAMINO/.test(e)) return 'transito';
-  if (/T[ÚU] ENV[ÍI]O FUE ENTREGADO|YA PUEDES RECOGER TU ENV[ÍI]O/.test(e)) return 'entregada';
+  // INTERRAPIDISIMO — REGLAS ESPECÍFICAS (según imagen proporcionada)
+  if (/ENV[IÍ]O PENDIENTE POR ADMITIR/.test(e)) return 'pendiente';
+  if (/CENTRO LOG[IÍ]STICO|VIAJANDO A TU DESTINO|RECIBIMOS T[ÚU] ENV[IÍ]O|EN CAMINO HACIA TI|EN PROCESAMIENTO/.test(e)) return 'transito';
+  if (/T[ÚU] ENV[IÍ]O FUE ENTREGADO|YA PUEDES RECOGER TU ENV[ÍI]O/.test(e)) return 'entregada';
+  if (/NO LOGRAMOS HACER LA ENTREGA/.test(e)) return 'novedad';
+  if (/FUE DEVUELTO/.test(e)) return 'devuelta';
+  if (/ENV[IÍ]O CANCELADO/.test(e)) return 'cancelada';
 
   return 'otro';
 }
@@ -990,7 +998,7 @@ function statusPill(estado) {
   return `<span class="pill pill-${cls}">${esc((estado||'—').substring(0,35))}</span>`;
 }
 
-function mkPagination(containerId, current, pages, onPage) {
+function mkPagination(containerId, current, pages, cmd) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (pages <= 1) { el.innerHTML = ''; return; }
@@ -998,12 +1006,15 @@ function mkPagination(containerId, current, pages, onPage) {
   const range = [];
   for (let i = Math.max(1, current-2); i <= Math.min(pages, current+2); i++) range.push(i);
 
+  // cmd es un string tipo "changeCarrierPage(' carrier ', {P})"
+  const _c = (p) => cmd.replace('{P}', p);
+
   el.innerHTML = `
-    <button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${current - 1})" ${current <= 1 ? 'disabled' : ''}>←</button>
-    ${current > 3 ? `<button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(1)">1</button><span style="color:var(--text-muted);padding:0 4px;">…</span>` : ''}
-    ${range.map(p => `<button class="pag-btn ${p === current ? 'active' : ''}" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${p})">${p}</button>`).join('')}
-    ${current < pages - 2 ? `<span style="color:var(--text-muted);padding:0 4px;">…</span><button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${pages})">${pages}</button>` : ''}
-    <button class="pag-btn" onclick="${onPage.toString().replace('p => ', '').replace('onPage', '')}(${current + 1})" ${current >= pages ? 'disabled' : ''}>→</button>
+    <button class="pag-btn" onclick="${_c(current-1)}" ${current<=1?'disabled':''}>←</button>
+    ${current > 3 ? `<button class="pag-btn" onclick="${_c(1)}">1</button><span style="color:var(--text-muted);padding:0 4px;">…</span>` : ''}
+    ${range.map(p => `<button class="pag-btn ${p===current?'active':''}" onclick="${_c(p)}">${p}</button>`).join('')}
+    ${current < pages-2 ? `<span style="color:var(--text-muted);padding:0 4px;">…</span><button class="pag-btn" onclick="${_c(pages)}">${pages}</button>` : ''}
+    <button class="pag-btn" onclick="${_c(current+1)}" ${current>=pages?'disabled':''}>→</button>
     <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${current} / ${pages}</span>
   `;
 }
