@@ -14,6 +14,7 @@
 </head>
 <body>
 
+    
 <!-- ══════════ DATA LOADING SCREEN ══════════ -->
 <div id="data-loading-screen" class="hidden">
   <div class="dl-card">
@@ -115,6 +116,9 @@
       <button class="tab-btn" data-tab="VELOCES" onclick="switchTab('VELOCES')">
         ⚡ Veloces <span class="tab-badge" id="badge-VELOCES">—</span>
       </button>
+      <button class="tab-btn" data-tab="INTERRAPIDISIMO" onclick="switchTab('INTERRAPIDISIMO')">
+        📦 Interrapidísimo <span class="tab-badge" id="badge-INTERRAPIDISIMO">—</span>
+      </button>
       <button class="tab-btn" data-tab="consulta-individual" onclick="switchTab('consulta-individual')">
         🔍 Consultar Guía <span class="tab-badge">1</span>
       </button>
@@ -196,6 +200,7 @@
           <option value="LOGICUARTAS">Logicuartas</option>
           <option value="SERVIENTREGA">Servientrega</option>
           <option value="VELOCES">Veloces</option>
+          <option value="INTERRAPIDISIMO">Interrapidísimo</option>
         </select>
         <select class="filter-select" id="filter-estado-norm" onchange="filterGeneral()">
           <option value="">Categoría estado</option>
@@ -243,6 +248,9 @@
     </div>
     <div class="tab-content" id="tab-VELOCES">
       <div id="content-VELOCES"></div>
+    </div>
+    <div class="tab-content" id="tab-INTERRAPIDISIMO">
+      <div id="content-INTERRAPIDISIMO"></div>
     </div>
 
     <div class="tab-content" id="tab-consulta-individual">

@@ -13,10 +13,10 @@ let chartInstances = {};
 let carrierCharts = {};
 
 const CARRIER_ICONS = {
-  COORDINADORA: '📦', LOGICUARTAS: '🚚', SERVIENTREGA: '🏃', VELOCES: '⚡'
+  COORDINADORA: '📦', LOGICUARTAS: '🚚', SERVIENTREGA: '🏃', VELOCES: '⚡', INTERRAPIDISIMO: '📦'
 };
 const CARRIER_COLORS = {
-  COORDINADORA: '#60a5fa', LOGICUARTAS: '#a78bfa', SERVIENTREGA: '#f97316', VELOCES: '#C5D336'
+  COORDINADORA: '#60a5fa', LOGICUARTAS: '#a78bfa', SERVIENTREGA: '#f97316', VELOCES: '#C5D336', INTERRAPIDISIMO: '#005fa8'
 };
 
 // ── PALETA CHARTS ──────────────────────────────────
@@ -242,7 +242,7 @@ async function reloadData() {
 //  DASHBOARD INIT
 // ══════════════════════════════════════════════════
 function initDashboard() {
-  const transportadoras = ['COORDINADORA', 'LOGICUARTAS', 'SERVIENTREGA', 'VELOCES'];
+  const transportadoras = ['COORDINADORA', 'LOGICUARTAS', 'SERVIENTREGA', 'VELOCES', 'INTERRAPIDISIMO'];
 
   document.getElementById('badge-general').textContent = RAW.length;
   transportadoras.forEach(t => {
